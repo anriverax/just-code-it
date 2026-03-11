@@ -3,6 +3,7 @@ import type { Easing } from "popmotion";
 export interface Image {
   img: string;
   name?: string;
+  blurDataURL?: string;
 }
 
 export interface Transition {

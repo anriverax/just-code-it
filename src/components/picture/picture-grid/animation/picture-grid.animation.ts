@@ -1,4 +1,3 @@
-import sync from "framesync";
 import { animate } from "popmotion";
 
 import {
@@ -12,30 +11,16 @@ import {
 import { DATASET_KEY, popmotionEasing } from "../picture-grid.utils";
 import { registerPositions } from "./picture-grid.position";
 
-const applyTransform = (
-  el: HTMLElement,
-  { translateX, translateY, scaleX, scaleY }: Coords,
-  { immediate }: { immediate?: boolean } = {}
-): void => {
+const applyTransform = (el: HTMLElement, { translateX, translateY, scaleX, scaleY }: Coords): void => {
   const isFinished = translateX === 0 && translateY === 0 && scaleX === 1 && scaleY === 1;
 
-  const styleEl = (): void => {
-    el.style.transform = isFinished
-      ? ""
-      : `translateX(${translateX}px) translateY(${translateY}px) scaleX(${scaleX}) scaleY(${scaleY})`;
-  };
-  if (immediate) styleEl();
-  else sync.render(styleEl);
+  el.style.transform = isFinished
+    ? ""
+    : `translateX(${translateX}px) translateY(${translateY}px) scaleX(${scaleX}) scaleY(${scaleY})`;
 
   const firstChild = el.children[0] as HTMLElement;
-
   if (firstChild) {
-    const styleChild = (): void => {
-      firstChild.style.transform = isFinished ? "" : `scaleX(${1 / scaleX}) scaleY(${1 / scaleY})`;
-    };
-
-    if (immediate) styleChild();
-    else sync.render(styleChild);
+    firstChild.style.transform = isFinished ? "" : `scaleX(${1 / scaleX}) scaleY(${1 / scaleY})`;
   }
 };
 
@@ -64,32 +49,45 @@ export const startAnimation = (
         firstChild.style.transformOrigin = "0 0";
       }
 
-      applyTransform(el, coords, { immediate: true });
+      applyTransform(el, coords);
 
       if (!popmotionEasing[transition]) {
         throw new Error(`${transition} is not a valid easing name`);
       }
 
+      let animationInstance: { stop: () => void } | null = null;
+      let timeoutId: ReturnType<typeof setTimeout> | null = null;
+
       const init = (): void => {
-        const animation = animate({
+        animationInstance = animate({
           from: coords,
           to: { translateX: 0, translateY: 0, scaleX: 1, scaleY: 1 },
           duration,
           ease: popmotionEasing[transition],
           onUpdate: (transforms: Coords): void => {
             applyTransform(el, transforms);
-            sync.postRender(() => registerPositions(cache, gridBoundingClientRect, [el]));
+          },
+          onComplete: (): void => {
+            registerPositions(cache, gridBoundingClientRect, [el]);
+            animationInstance = null;
           }
         });
-
-        position.stop = () => animation.stop;
       };
 
-      const timeoutId = setTimeout((): void => {
-        sync.update(init);
+      timeoutId = setTimeout((): void => {
+        requestAnimationFrame(init);
       }, timeOut * i);
 
-      position.stop = () => clearTimeout(timeoutId);
+      position.stop = (): void => {
+        if (timeoutId) {
+          clearTimeout(timeoutId);
+          timeoutId = null;
+        }
+        if (animationInstance) {
+          animationInstance.stop();
+          animationInstance = null;
+        }
+      };
     }
   );
 };
@@ -99,17 +97,21 @@ export const stopCurrentTransitions = (
   container: HTMLElement
 ): HTMLElement[] => {
   const childrenElements = Array.from(container.children) as HTMLElement[];
+
   childrenElements.forEach((el) => {
     const position = cache[el.dataset[DATASET_KEY] as string];
-    if (position && position.stop) {
+    if (position?.stop) {
       position.stop();
       delete position.stop;
     }
   });
-  childrenElements.forEach((el) => {
-    el.style.transform = "";
-    const firstChild = el.children[0] as HTMLElement;
-    if (firstChild) firstChild.style.transform = "";
+
+  requestAnimationFrame(() => {
+    childrenElements.forEach((el) => {
+      el.style.transform = "";
+      const firstChild = el.children[0] as HTMLElement;
+      if (firstChild) firstChild.style.transform = "";
+    });
   });
 
   return childrenElements;
