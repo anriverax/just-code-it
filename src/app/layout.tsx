@@ -1,14 +1,12 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono, Inter } from "next/font/google";
+import { Figtree, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { cn } from "@/lib/utils";
-import Background from "@/components/ui/background";
-import CursorDecorator from "@/components/ui/cursor-decorator";
+import Background from "@/components/background";
+import CursorDecorator from "@/components/cursor-decorator";
 
-const inter = Inter({ subsets: ["latin"], variable: "--font-sans" });
-
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const figtree = Figtree({
+  variable: "--font-figtree",
   subsets: ["latin"]
 });
 
@@ -28,8 +26,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>): React.JSX.Element {
   return (
-    <html lang="en" className={cn("font-sans", inter.variable)}>
-      <body className={`${geistSans.variable} ${geistMono.variable} antialiased relative min-h-screen`}>
+    <html lang="en" className={cn("font-sans", figtree.variable)}>
+      <body className={`${geistMono.variable} antialiased relative min-h-screen`}>
         <Background />
         <CursorDecorator color="#7FC8FF">{children}</CursorDecorator>
       </body>
