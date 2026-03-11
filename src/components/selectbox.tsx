@@ -1,7 +1,7 @@
 "use client";
 
 import ModalLayout from "@/components/modal-layout";
-import { Key, ListBox, Select } from "@heroui/react";
+import { type Key, ListBox, Select } from "@heroui/react";
 import { useState } from "react";
 import type { Image } from "./picture/picture-grid/picture-grid.type";
 import { CircleXmark } from "@gravity-ui/icons";

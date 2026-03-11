@@ -34,20 +34,20 @@ const CursorDecorator = ({
   const hasMovedRef = useRef<boolean>(false);
   const [hasMoved, setHasMoved] = useState<boolean>(false);
 
-  const handleMouseMove = (event: MouseEvent): void => {
-    if (!hasMovedRef.current) {
-      hasMovedRef.current = true;
-      setHasMoved(true);
-      outerPositionRef.current = {
-        x: event.clientX - OUTER_OFFSET,
-        y: event.clientY - OUTER_OFFSET
-      };
-    }
-
-    pointerPositionRef.current = { x: event.clientX, y: event.clientY };
-  };
-
   useEffect((): (() => void) => {
+    const handleMouseMove = (event: MouseEvent): void => {
+      if (!hasMovedRef.current) {
+        hasMovedRef.current = true;
+        setHasMoved(true);
+        outerPositionRef.current = {
+          x: event.clientX - OUTER_OFFSET,
+          y: event.clientY - OUTER_OFFSET
+        };
+      }
+
+      pointerPositionRef.current = { x: event.clientX, y: event.clientY };
+    };
+
     document.addEventListener("mousemove", handleMouseMove);
 
     return (): void => {
