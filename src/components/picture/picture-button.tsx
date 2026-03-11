@@ -27,7 +27,7 @@ const PictureButton = ({
   size = "medium",
   onClick,
   label
-}: PictureButtonProps) => {
+}: PictureButtonProps): React.JSX.Element => {
   const mode = primary ? "picture-button--primary" : "picture-button--secondary";
 
   return (
