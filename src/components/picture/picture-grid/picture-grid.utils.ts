@@ -34,7 +34,6 @@ export const popmotionEasing: Transition = {
 const PICTURE_DIR = path.join(process.cwd(), "public", "picture");
 const VALID_EXTENSIONS = new Set([".png", ".jpg", ".jpeg", ".webp", ".avif"]);
 
-
 export const DATASET_KEY = "elegantPictureBoxId";
 
 export const toArray = <T extends Element>(arrLike: ArrayLike<T> | HTMLCollectionOf<T>): T[] => {
@@ -54,4 +53,4 @@ export const getPortfolioImages = async (): Promise<Image[]> => {
       img: `/picture/${fileName}`,
       name: path.parse(fileName).name
     }));
-}
+};
