@@ -7,7 +7,12 @@ type PictureBoxProps = {
   height?: number;
 };
 
-export const PictureBox = ({ src, alt, width = 300, height = 200 }: PictureBoxProps): React.JSX.Element => (
+export const PictureBox = ({
+  src,
+  alt,
+  width = 300,
+  height = 200
+}: PictureBoxProps): React.JSX.Element => (
   <div style={{ position: "relative", width, height }}>
     {src ? (
       <Image fill alt={alt ?? ""} sizes={`${width}px`} src={src} style={{ objectFit: "cover" }} />
