@@ -6,5 +6,5 @@ type GalleryProps = {
 };
 
 export const Gallery = ({ portfolios }: GalleryProps): React.JSX.Element => {
-  return <PicturesGrid items={portfolios} transition="easeInOut" duration={0.8} timeOut={300} />;
+  return <PicturesGrid items={portfolios} transition="easeInOut" duration={800} timeOut={300} />;
 };

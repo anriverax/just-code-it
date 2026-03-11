@@ -2,7 +2,7 @@
 
 import { CircleCheck } from "@gravity-ui/icons";
 import { Button, Modal } from "@heroui/react";
-import React, { Key } from "react";
+import React, { type Key } from "react";
 import { Gallery } from "./gallery";
 import type { Image } from "./picture/picture-grid/picture-grid.type";
 

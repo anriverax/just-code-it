@@ -74,14 +74,12 @@ export const getNewPositions = (
 
   if (!positionGridChildren.length) return;
 
-  positionGridChildren.map((data) => {
+  positionGridChildren.forEach((data) => {
     const firstChild = data.el.children[0] as HTMLElement;
 
     if (firstChild) {
       data.childCoords = getCurrentPositionChildElement(gridBoundingClientRect, firstChild);
     }
-
-    return data;
   });
 
   return positionGridChildren;
