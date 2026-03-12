@@ -21,31 +21,13 @@ export const metadata: Metadata = {
   description: "Interactive gallery and portfolio showcase"
 };
 
-const themeInitScript = `
-  (() => {
-    const storageKey = "theme";
-    const storedTheme = window.localStorage.getItem(storageKey);
-    const theme =
-      storedTheme === "light" || storedTheme === "dark"
-        ? storedTheme
-        : window.matchMedia("(prefers-color-scheme: dark)").matches
-          ? "dark"
-          : "light";
-    document.documentElement.dataset.theme = theme;
-    document.documentElement.classList.toggle("dark", theme === "dark");
-  })();
-`;
-
 export default function RootLayout({
   children
 }: Readonly<{
   children: React.ReactNode;
 }>): React.JSX.Element {
   return (
-    <html suppressHydrationWarning className={cn("font-sans", figtree.variable)} lang="en">
-      <head>
-        <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
-      </head>
+    <html className={cn("font-sans", figtree.variable)} lang="en">
       <body className={`${geistMono.variable} antialiased relative min-h-screen`}>
         <Background />
         <ThemeToggle />

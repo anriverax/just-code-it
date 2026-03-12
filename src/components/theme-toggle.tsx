@@ -1,7 +1,7 @@
 "use client";
 
 import { Moon, Sun } from "@gravity-ui/icons";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 
 type Theme = "light" | "dark";
 
@@ -18,11 +18,6 @@ const getPreferredTheme = (): Theme => {
     return "light";
   }
 
-  const domTheme = document.documentElement.dataset.theme;
-  if (domTheme === "light" || domTheme === "dark") {
-    return domTheme;
-  }
-
   const storedTheme = window.localStorage.getItem(STORAGE_KEY);
   if (storedTheme === "light" || storedTheme === "dark") {
     return storedTheme;
@@ -32,23 +27,22 @@ const getPreferredTheme = (): Theme => {
 };
 
 const ThemeToggle = (): React.JSX.Element => {
-  const [theme, setTheme] = useState<Theme>(() => getPreferredTheme());
-
   useEffect(() => {
-    applyTheme(theme);
-  }, [theme]);
+    const preferredTheme = getPreferredTheme();
+    applyTheme(preferredTheme);
+  }, []);
 
   const setNextTheme = (nextTheme: Theme): void => {
-    setTheme(nextTheme);
+    applyTheme(nextTheme);
     window.localStorage.setItem(STORAGE_KEY, nextTheme);
   };
 
   return (
-    <div className="fixed right-4 top-4 z-[1000] rounded-full border border-border/80 bg-surface/90 p-1 shadow-sm backdrop-blur">
+    <div className="fixed right-4 top-4 z-1000 rounded-full border border-border/80 bg-surface/90 p-1 shadow-sm backdrop-blur">
       <div className="grid grid-cols-2 gap-1">
         <button
           aria-label="Switch to light theme"
-          className={`rounded-full p-2 transition-colors ${theme === "light" ? "bg-background text-foreground" : "text-muted hover:text-foreground"}`}
+          className="rounded-full p-2 text-muted transition-colors hover:bg-background hover:text-foreground"
           type="button"
           onClick={() => setNextTheme("light")}
         >
@@ -56,7 +50,7 @@ const ThemeToggle = (): React.JSX.Element => {
         </button>
         <button
           aria-label="Switch to dark theme"
-          className={`rounded-full p-2 transition-colors ${theme === "dark" ? "bg-background text-foreground" : "text-muted hover:text-foreground"}`}
+          className="rounded-full p-2 text-muted transition-colors hover:bg-background hover:text-foreground"
           type="button"
           onClick={() => setNextTheme("dark")}
         >

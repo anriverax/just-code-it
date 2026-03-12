@@ -5,7 +5,7 @@ classification-reason: Process automation persists regardless of model advanceme
 deprecation-risk: none
 description: |
   Code review skill for analyzing code quality, detecting bugs, and ensuring best practices.
-  Provides comprehensive code review with actionable feedback.
+  Operates under the persona and principles defined in copilot-instructions.md.
 
   Use proactively when user requests code review, quality check, or bug detection.
 
@@ -29,6 +29,7 @@ allowed-tools:
   - Bash
 imports:
   - ${PLUGIN_ROOT}/templates/pipeline/phase-8-review.template.md
+  - .github/agents/copilot-instructions.md # ← base persona & principles
 next-skill: null
 pdca-phase: check
 task-template: "[Code-Review] {feature}"
@@ -41,41 +42,60 @@ hooks:
 
 # Code Review Skill
 
-> Skill for code quality analysis and review
+> Extends the persona defined in `copilot-instructions.md`.
+> All base principles (Clean Code, SOLID, Modern React, Strict Typing,
+> Composition over Inheritance, Performance, Direct Tone) apply here automatically.
+> The categories below are **additive** — they cover concerns the base persona
+> doesn't address explicitly.
 
 ## Arguments
 
-| Argument | Description | Example |
-|----------|-------------|---------|
-| `[file]` | Review specific file | `/code-review src/lib/auth.ts` |
-| `[directory]` | Review entire directory | `/code-review src/features/` |
-| `[pr]` | PR review (PR number) | `/code-review pr 123` |
+| Argument      | Description             | Example                        |
+| ------------- | ----------------------- | ------------------------------ |
+| `[file]`      | Review specific file    | `/code-review src/lib/auth.ts` |
+| `[directory]` | Review entire directory | `/code-review src/features/`   |
+| `[pr]`        | PR review (PR number)   | `/code-review pr 123`          |
+
+---
 
 ## Review Categories
 
-### 1. Code Quality
-- Duplicate code detection
-- Function/file complexity analysis
-- Naming convention check
-- Type safety verification
+> **Already covered by `copilot-instructions.md` — do NOT duplicate:**
+>
+> - Type safety / no `any` (→ base principle: Strict Typing)
+> - `useMemo` / `useCallback` / re-render analysis (→ base principle: Performance)
+> - Functional components & hooks (→ base principle: Modern React)
+> - Prop drilling / composition patterns (→ base principle: Composition over Inheritance)
+> - SOLID violations & naming (→ base principle: Clean Code & SOLID)
 
-### 2. Bug Detection
-- Potential bug pattern detection
-- Null/undefined handling check
-- Error handling inspection
-- Boundary condition verification
+### 1. Additive: Security (not in base persona)
 
-### 3. Security
-- XSS/CSRF vulnerability check
+- XSS / CSRF vulnerability detection
 - SQL Injection pattern detection
-- Sensitive information exposure check
-- Authentication/authorization logic review
+- Sensitive data exposure (tokens, secrets, env vars in code)
+- Auth / authorization logic review
 
-### 4. Performance
-- N+1 query pattern detection
-- Unnecessary re-render check
-- Memory leak pattern detection
-- Optimization opportunity identification
+### 2. Additive: Infrastructure & Runtime Bugs (not in base persona)
+
+- Null / undefined edge cases not caught by types
+- Unhandled promise rejections / missing error boundaries
+- Boundary condition failures (off-by-one, empty arrays, zero values)
+- Memory leak patterns (missing cleanup in `useEffect`, event listener leaks)
+
+### 3. Additive: Data Access Performance (not in base persona)
+
+- N+1 query patterns (especially in RSC / server components)
+- Missing pagination or unbounded list fetches
+- Unnecessary server round-trips
+
+### 4. Additive: Next.js / SSR Specifics (not in base persona)
+
+- Incorrect use of `"use client"` / `"use server"` directives
+- Mixing server and client component concerns
+- Missing `Suspense` boundaries for async RSC
+- Improper use of `next/image` vs raw `<img>`
+
+---
 
 ## Review Output Format
 
@@ -89,25 +109,31 @@ hooks:
 
 ### Critical Issues
 1. [FILE:LINE] Issue description
-   Suggestion: ...
+   Category: Security | Runtime | Data | Next.js
+   Suggestion: …
 
 ### Major Issues
-...
+…
 
 ### Minor Issues
-...
+…
 
 ### Recommendations
-- ...
+- …
 ```
+
+---
 
 ## Agent Integration
 
-This Skill calls the `code-analyzer` Agent for in-depth code analysis.
+| Agent         | Role                                                  |
+| ------------- | ----------------------------------------------------- |
+| code-analyzer | Security, runtime bugs, data access, Next.js patterns |
 
-| Agent | Role |
-|-------|------|
-| code-analyzer | Code quality, security, performance analysis |
+> Type safety, performance hooks, and SOLID are evaluated directly
+> by the base persona — no separate agent pass needed for those.
+
+---
 
 ## Usage Examples
 
@@ -125,18 +151,20 @@ This Skill calls the `code-analyzer` Agent for in-depth code analysis.
 /code-review staged
 ```
 
+---
+
 ## Confidence-Based Filtering
 
-code-analyzer Agent uses confidence-based filtering:
+| Confidence      | Display           | Description           |
+| --------------- | ----------------- | --------------------- |
+| High (90%+)     | Always shown      | Definite issues       |
+| Medium (70–89%) | Selectively shown | Possible issues       |
+| Low (<70%)      | Hidden            | Uncertain suggestions |
 
-| Confidence | Display | Description |
-|------------|---------|-------------|
-| High (90%+) | Always shown | Definite issues |
-| Medium (70-89%) | Selectively shown | Possible issues |
-| Low (<70%) | Hidden | Uncertain suggestions |
+---
 
 ## PDCA Integration
 
 - **Phase**: Check (Quality verification)
 - **Trigger**: Auto-suggested after implementation
-- **Output**: docs/03-analysis/code-review-{date}.md
+- **Output**: `docs/03-analysis/code-review-{date}.md`
