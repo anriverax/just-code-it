@@ -1,9 +1,10 @@
 import { readdir } from "node:fs/promises";
 import path from "node:path";
 
-import { Image } from "./picture-grid.type";
+import { PortfolioImage } from "./picture-grid.type";
 
-const PICTURE_DIR = path.join(process.cwd(), "public", "picture");
+const PICTURE_SUBDIR = "picture";
+const PICTURE_DIR = path.join(process.cwd(), "public", PICTURE_SUBDIR);
 const VALID_EXTENSIONS = new Set([".png", ".jpg", ".jpeg", ".webp", ".avif"]);
 
 const SHIMMER_SVG = `
@@ -22,7 +23,7 @@ const SHIMMER_SVG = `
 
 const BLUR_DATA_URL = `data:image/svg+xml;base64,${Buffer.from(SHIMMER_SVG).toString("base64")}`;
 
-export const getPortfolioImages = async (): Promise<Image[]> => {
+export const getPortfolioImages = async (): Promise<PortfolioImage[]> => {
   const files = await readdir(PICTURE_DIR, { withFileTypes: true });
 
   return files
@@ -31,7 +32,7 @@ export const getPortfolioImages = async (): Promise<Image[]> => {
     .filter((fileName) => VALID_EXTENSIONS.has(path.extname(fileName).toLowerCase()))
     .sort((a, b) => a.localeCompare(b, undefined, { numeric: true }))
     .map((fileName) => ({
-      img: `/picture/${fileName}`,
+      img: `/${PICTURE_SUBDIR}/${fileName}`,
       name: path.parse(fileName).name,
       blurDataURL: BLUR_DATA_URL
     }));

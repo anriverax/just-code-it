@@ -14,9 +14,14 @@ interface Point {
   y: number;
 }
 
-const CURSOR_SIZE = 30;
-const OUTER_OFFSET = CURSOR_SIZE / 2;
-const OUTER_LERP = 0.18;
+/** Diameter of the outer ring cursor in CSS pixels */
+const CURSOR_SIZE_PX = 30;
+const OUTER_OFFSET_PX = CURSOR_SIZE_PX / 2;
+/** Lerp factor per frame at ~60 fps — lower = smoother/slower trailing */
+const OUTER_LERP_FACTOR = 0.18;
+const ACTIVE_SCALE = 3;
+const ACTIVE_OPACITY = "0.2";
+const INTERACTIVE_SELECTOR = "a, button, [role='button']";
 
 const CursorDecorator = ({
   children,
@@ -40,8 +45,8 @@ const CursorDecorator = ({
         hasMovedRef.current = true;
         setHasMoved(true);
         outerPositionRef.current = {
-          x: event.clientX - OUTER_OFFSET,
-          y: event.clientY - OUTER_OFFSET
+          x: event.clientX - OUTER_OFFSET_PX,
+          y: event.clientY - OUTER_OFFSET_PX
         };
       }
 
@@ -70,15 +75,15 @@ const CursorDecorator = ({
       const isActive = isActiveRef.current;
       const visible = hasMovedRef.current;
 
-      const targetX = pointer.x - OUTER_OFFSET;
-      const targetY = pointer.y - OUTER_OFFSET;
-      outer.x += (targetX - outer.x) * OUTER_LERP;
-      outer.y += (targetY - outer.y) * OUTER_LERP;
+      const targetX = pointer.x - OUTER_OFFSET_PX;
+      const targetY = pointer.y - OUTER_OFFSET_PX;
+      outer.x += (targetX - outer.x) * OUTER_LERP_FACTOR;
+      outer.y += (targetY - outer.y) * OUTER_LERP_FACTOR;
 
       cursorEl.style.transform = isActive
-        ? `translate3d(${outer.x}px, ${outer.y}px, 0) scale(3)`
+        ? `translate3d(${outer.x}px, ${outer.y}px, 0) scale(${ACTIVE_SCALE})`
         : `translate3d(${outer.x}px, ${outer.y}px, 0)`;
-      cursorEl.style.opacity = visible ? (isActive ? "0.2" : "1") : "0";
+      cursorEl.style.opacity = visible ? (isActive ? ACTIVE_OPACITY : "1") : "0";
       cursorEl.style.border = isActive ? "none" : `1px solid ${color}`;
       cursorEl.style.backgroundColor = isActive ? color : "transparent";
 
@@ -99,26 +104,16 @@ const CursorDecorator = ({
   }, [color]);
 
   useEffect((): (() => void) => {
-    const selector = "a, button, [role='button']";
-
-    const handleMouseOver = (event: MouseEvent): void => {
-      const target = event.target as Element | null;
-      if (target?.closest(selector)) {
+    const handleActivate = (event: MouseEvent): void => {
+      if ((event.target as Element | null)?.closest(INTERACTIVE_SELECTOR)) {
         isActiveRef.current = true;
       }
     };
 
     const handleMouseOut = (event: MouseEvent): void => {
       const target = event.target as Element | null;
-      if (target?.closest(selector)) {
+      if (target?.closest(INTERACTIVE_SELECTOR)) {
         isActiveRef.current = false;
-      }
-    };
-
-    const handleMouseDown = (event: MouseEvent): void => {
-      const target = event.target as Element | null;
-      if (target?.closest(selector)) {
-        isActiveRef.current = true;
       }
     };
 
@@ -126,15 +121,15 @@ const CursorDecorator = ({
       isActiveRef.current = false;
     };
 
-    document.addEventListener("mouseover", handleMouseOver);
+    document.addEventListener("mouseover", handleActivate);
     document.addEventListener("mouseout", handleMouseOut);
-    document.addEventListener("mousedown", handleMouseDown);
+    document.addEventListener("mousedown", handleActivate);
     document.addEventListener("mouseup", handleMouseUp);
 
     return (): void => {
-      document.removeEventListener("mouseover", handleMouseOver);
+      document.removeEventListener("mouseover", handleActivate);
       document.removeEventListener("mouseout", handleMouseOut);
-      document.removeEventListener("mousedown", handleMouseDown);
+      document.removeEventListener("mousedown", handleActivate);
       document.removeEventListener("mouseup", handleMouseUp);
     };
   }, []);

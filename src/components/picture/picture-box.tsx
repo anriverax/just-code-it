@@ -13,7 +13,7 @@ export const PictureBox = ({
   width = 300,
   height = 200
 }: PictureBoxProps): React.JSX.Element => (
-  <div style={{ position: "relative", width, height }}>
+  <div className="relative" style={{ width, height }}>
     {src ? (
       <Image fill alt={alt ?? ""} sizes={`${width}px`} src={src} style={{ objectFit: "cover" }} />
     ) : (
