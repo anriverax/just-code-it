@@ -44,9 +44,12 @@ hooks:
 
 > Extends the persona defined in `copilot-instructions.md`.
 > All base principles (Clean Code, SOLID, Modern React, Strict Typing,
-> Composition over Inheritance, Performance, Direct Tone) apply here automatically.
+> Composition over Inheritance, Performance, Direct Tone) apply automatically.
 > The categories below are **additive** — they cover concerns the base persona
 > doesn't address explicitly.
+
+Be critical. Every issue must be reported regardless of perceived severity.
+Do not soften findings. Do not skip minor issues.
 
 ## Arguments
 
@@ -62,33 +65,36 @@ hooks:
 
 > **Already covered by `copilot-instructions.md` — do NOT duplicate:**
 >
-> - Type safety / no `any` (→ base principle: Strict Typing)
-> - `useMemo` / `useCallback` / re-render analysis (→ base principle: Performance)
-> - Functional components & hooks (→ base principle: Modern React)
-> - Prop drilling / composition patterns (→ base principle: Composition over Inheritance)
-> - SOLID violations & naming (→ base principle: Clean Code & SOLID)
+> - Type safety / no `any` (→ Strict Typing)
+> - `useMemo` / `useCallback` / re-render analysis (→ Performance)
+> - Functional components & hooks (→ Modern React)
+> - Prop drilling / composition patterns (→ Composition over Inheritance)
+> - SOLID violations & naming (→ Clean Code & SOLID)
 
-### 1. Additive: Security (not in base persona)
+### 1. Additive: Security
 
 - XSS / CSRF vulnerability detection
 - SQL Injection pattern detection
 - Sensitive data exposure (tokens, secrets, env vars in code)
 - Auth / authorization logic review
 
-### 2. Additive: Infrastructure & Runtime Bugs (not in base persona)
+> Note: For Next.js-specific security (dangerouslySetInnerHTML, env leakage,
+> insecure API routes), `nextjs-architect` handles this in detail.
+
+### 2. Additive: Infrastructure & Runtime Bugs
 
 - Null / undefined edge cases not caught by types
 - Unhandled promise rejections / missing error boundaries
 - Boundary condition failures (off-by-one, empty arrays, zero values)
 - Memory leak patterns (missing cleanup in `useEffect`, event listener leaks)
 
-### 3. Additive: Data Access Performance (not in base persona)
+### 3. Additive: Data Access Performance
 
 - N+1 query patterns (especially in RSC / server components)
 - Missing pagination or unbounded list fetches
 - Unnecessary server round-trips
 
-### 4. Additive: Next.js / SSR Specifics (not in base persona)
+### 4. Additive: Next.js / SSR Specifics
 
 - Incorrect use of `"use client"` / `"use server"` directives
 - Mixing server and client component concerns
@@ -109,7 +115,7 @@ hooks:
 
 ### Critical Issues
 1. [FILE:LINE] Issue description
-   Category: Security | Runtime | Data | Next.js
+   Category: Security | Runtime | Data | Next.js | Code Quality
    Suggestion: …
 
 ### Major Issues
@@ -126,12 +132,13 @@ hooks:
 
 ## Agent Integration
 
-| Agent         | Role                                                  |
-| ------------- | ----------------------------------------------------- |
-| code-analyzer | Security, runtime bugs, data access, Next.js patterns |
-
-> Type safety, performance hooks, and SOLID are evaluated directly
-> by the base persona — no separate agent pass needed for those.
+| Agent                  | Scope                                                             |
+| ---------------------- | ----------------------------------------------------------------- |
+| `code-reviewer`        | SOLID, naming, long functions, tight coupling — language-agnostic |
+| `nextjs-architect`     | App Router, SSR/SSG/ISR, React hooks, Next.js security            |
+| `performance-engineer` | API latency, blocking ops, N+1, LCP/FID/CLS impact                |
+| `database-architect`   | Schema, indexes, joins, query optimization                        |
+| `nestjs-architect`     | NestJS modules, controllers, services, DTOs                       |
 
 ---
 
