@@ -5,7 +5,7 @@ classification-reason: Process automation persists regardless of model advanceme
 deprecation-risk: none
 description: |
   Code review skill for analyzing code quality, detecting bugs, and ensuring best practices.
-  Operates under the persona and principles defined in copilot-instructions.md.
+  Provides comprehensive code review with actionable feedback.
 
   Use proactively when user requests code review, quality check, or bug detection.
 
@@ -29,7 +29,7 @@ allowed-tools:
   - Bash
 imports:
   - ${PLUGIN_ROOT}/templates/pipeline/phase-8-review.template.md
-  - .github/agents/copilot-instructions.md # ← base persona & principles
+  - .github/agents/copilot-instructions.md
 next-skill: null
 pdca-phase: check
 task-template: "[Code-Review] {feature}"
@@ -42,11 +42,9 @@ hooks:
 
 # Code Review Skill
 
-> Extends the persona defined in `copilot-instructions.md`.
-> All base principles (Clean Code, SOLID, Modern React, Strict Typing,
-> Composition over Inheritance, Performance, Direct Tone) apply automatically.
-> The categories below are **additive** — they cover concerns the base persona
-> doesn't address explicitly.
+> Skill for code quality analysis and review.
+> The categories below cover only what no specialized agent handles.
+> See Agent Integration for delegation boundaries.
 
 Be critical. Every issue must be reported regardless of perceived severity.
 Do not soften findings. Do not skip minor issues.
@@ -59,49 +57,35 @@ Do not soften findings. Do not skip minor issues.
 | `[directory]` | Review entire directory | `/code-review src/features/`   |
 | `[pr]`        | PR review (PR number)   | `/code-review pr 123`          |
 
----
-
 ## Review Categories
 
-> **Already covered by `copilot-instructions.md` — do NOT duplicate:**
+> Already covered by specialized agents — do NOT duplicate here:
 >
-> - Type safety / no `any` (→ Strict Typing)
-> - `useMemo` / `useCallback` / re-render analysis (→ Performance)
-> - Functional components & hooks (→ Modern React)
-> - Prop drilling / composition patterns (→ Composition over Inheritance)
-> - SOLID violations & naming (→ Clean Code & SOLID)
+> - Duplicate code, complexity, naming → `code-reviewer`
+> - XSS/CSRF, re-renders, Next.js patterns → `nextjs-architect`
+> - N+1, blocking ops, optimization → `performance-engineer`
+> - Schema, indexes, queries → `database-architect`
+> - NestJS modules, controllers, DTOs → `nestjs-architect`
 
-### 1. Additive: Security
+### 1. Type Safety
 
-- XSS / CSRF vulnerability detection
+- Type safety verification
+- Missing or incorrect TypeScript types
+- Unsafe type assertions (`as`, `!`)
+
+### 2. Bug Detection
+
+- Potential bug pattern detection
+- Null/undefined handling check
+- Error handling inspection
+- Boundary condition verification
+
+### 3. Security
+
 - SQL Injection pattern detection
-- Sensitive data exposure (tokens, secrets, env vars in code)
-- Auth / authorization logic review
-
-> Note: For Next.js-specific security (dangerouslySetInnerHTML, env leakage,
-> insecure API routes), `nextjs-architect` handles this in detail.
-
-### 2. Additive: Infrastructure & Runtime Bugs
-
-- Null / undefined edge cases not caught by types
-- Unhandled promise rejections / missing error boundaries
-- Boundary condition failures (off-by-one, empty arrays, zero values)
-- Memory leak patterns (missing cleanup in `useEffect`, event listener leaks)
-
-### 3. Additive: Data Access Performance
-
-- N+1 query patterns (especially in RSC / server components)
-- Missing pagination or unbounded list fetches
-- Unnecessary server round-trips
-
-### 4. Additive: Next.js / SSR Specifics
-
-- Incorrect use of `"use client"` / `"use server"` directives
-- Mixing server and client component concerns
-- Missing `Suspense` boundaries for async RSC
-- Improper use of `next/image` vs raw `<img>`
-
----
+- Sensitive information exposure check (tokens, secrets, env vars in code)
+- Authentication/authorization logic review
+- Memory leak pattern detection
 
 ## Review Output Format
 
@@ -115,32 +99,30 @@ Do not soften findings. Do not skip minor issues.
 
 ### Critical Issues
 1. [FILE:LINE] Issue description
-   Category: Security | Runtime | Data | Next.js | Code Quality
-   Suggestion: …
+   Suggestion: ...
 
 ### Major Issues
-…
+...
 
 ### Minor Issues
-…
+...
 
 ### Recommendations
-- …
+- ...
 ```
-
----
 
 ## Agent Integration
 
-| Agent                  | Scope                                                             |
-| ---------------------- | ----------------------------------------------------------------- |
-| `code-reviewer`        | SOLID, naming, long functions, tight coupling — language-agnostic |
-| `nextjs-architect`     | App Router, SSR/SSG/ISR, React hooks, Next.js security            |
-| `performance-engineer` | API latency, blocking ops, N+1, LCP/FID/CLS impact                |
-| `database-architect`   | Schema, indexes, joins, query optimization                        |
-| `nestjs-architect`     | NestJS modules, controllers, services, DTOs                       |
+This Skill calls the `code-analyzer` Agent for in-depth code analysis.
 
----
+| Agent                | Role                                                   |
+| -------------------- | ------------------------------------------------------ |
+| code-analyzer        | Code quality, security, performance analysis           |
+| code-reviewer        | SOLID, naming, complexity — language-agnostic          |
+| nextjs-architect     | App Router, SSR/SSG/ISR, React hooks, Next.js security |
+| performance-engineer | API latency, blocking ops, N+1, LCP/FID/CLS            |
+| database-architect   | Schema, indexes, joins, query optimization             |
+| nestjs-architect     | NestJS modules, controllers, services, DTOs            |
 
 ## Usage Examples
 
@@ -158,20 +140,18 @@ Do not soften findings. Do not skip minor issues.
 /code-review staged
 ```
 
----
-
 ## Confidence-Based Filtering
+
+code-analyzer Agent uses confidence-based filtering:
 
 | Confidence      | Display           | Description           |
 | --------------- | ----------------- | --------------------- |
 | High (90%+)     | Always shown      | Definite issues       |
-| Medium (70–89%) | Selectively shown | Possible issues       |
+| Medium (70-89%) | Selectively shown | Possible issues       |
 | Low (<70%)      | Hidden            | Uncertain suggestions |
-
----
 
 ## PDCA Integration
 
 - **Phase**: Check (Quality verification)
 - **Trigger**: Auto-suggested after implementation
-- **Output**: `docs/03-analysis/code-review-{date}.md`
+- **Output**: docs/03-analysis/code-review-{date}.md

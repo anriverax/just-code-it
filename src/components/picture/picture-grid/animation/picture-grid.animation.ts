@@ -1,11 +1,6 @@
 import { animate } from "popmotion";
 
-import {
-  Coords,
-  ItemCachePosition,
-  PositionCoordinates,
-  PositionGridChild
-} from "../picture-grid.type";
+import { Coords, ItemCachePosition, PositionCoordinates, PositionGridChild } from "../picture-grid.type";
 
 import { GRID_ITEM_KEY, TransitionKey, popmotionEasing } from "../picture-grid.utils";
 import { registerPositions } from "./picture-grid.position";
@@ -31,11 +26,15 @@ export const startAnimation = (
   positionGridChildren: PositionGridChild[],
   transition: TransitionKey,
   duration: number,
-  staggerDelayMs: number
+  staggerDelayMs: number,
+  onAllComplete?: () => void
 ): void => {
   if (!popmotionEasing[transition]) {
     throw new Error(`"${transition}" is not a valid easing name`);
   }
+
+  const totalAnimations = positionGridChildren.length;
+  let completedAnimations = 0;
 
   positionGridChildren.forEach(
     ({ el, currentPositionChildElement: { top, left, width, height } }, i) => {
@@ -71,6 +70,10 @@ export const startAnimation = (
           onComplete: (): void => {
             registerPositions(cache, gridBoundingClientRect, [el]);
             animationInstance = null;
+            completedAnimations++;
+            if (completedAnimations === totalAnimations && onAllComplete) {
+              onAllComplete();
+            }
           }
         });
       };

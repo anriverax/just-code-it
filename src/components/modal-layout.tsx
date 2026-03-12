@@ -34,9 +34,7 @@ const ModalLayout = ({
             <Modal.Icon className="bg-accent-soft text-accent-soft-foreground">
               <CircleCheck className="size-5" />
             </Modal.Icon>
-            <Modal.Heading>
-              {VIEW_TITLES[activeView as ViewKey] ?? "Example"}
-            </Modal.Heading>
+            <Modal.Heading>{VIEW_TITLES[activeView as ViewKey] ?? "Example"}</Modal.Heading>
           </Modal.Header>
           <Modal.Body>
             {activeView === VIEW_KEYS.GALLERY && <Gallery portfolios={portfolios} />}

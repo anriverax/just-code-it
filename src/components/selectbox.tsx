@@ -8,9 +8,7 @@ import ModalLayout from "@/components/modal-layout";
 import type { PortfolioImage } from "./picture";
 import { VIEW_KEYS } from "./view-keys";
 
-const SELECT_OPTIONS = [
-  { id: VIEW_KEYS.GALLERY, label: "Image Gallery" }
-] as const;
+const SELECT_OPTIONS = [{ id: VIEW_KEYS.GALLERY, label: "Image Gallery" }] as const;
 
 type SelectboxProps = {
   portfolios: PortfolioImage[];

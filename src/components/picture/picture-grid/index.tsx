@@ -11,15 +11,23 @@ const DEFAULT_SIZES = "(max-width: 640px) 50vw, (max-width: 768px) 33vw, 16vw";
 /** Number of images loaded eagerly as they are likely above the fold */
 const EAGER_LOAD_COUNT = 6;
 
-const PicturesGrid = ({ items, transition, duration, staggerDelayMs }: ItemsProps): React.JSX.Element => {
+const PicturesGrid = ({
+  items,
+  transition,
+  duration,
+  staggerDelayMs
+}: ItemsProps): React.JSX.Element => {
   const gridRef = useRef<HTMLDivElement>(null);
   const cacheRef = useRef<ItemCachePosition>({});
+  const isAnimatingRef = useRef<boolean>(false);
   const [zoomedIndex, setZoomedIndex] = useState<number | null>(null);
 
   const handleClick = useCallback(
     (ev: MouseEvent): void => {
       const grid = gridRef.current;
       if (!grid) return;
+
+      if (isAnimatingRef.current) return;
 
       const card = (ev.target as HTMLElement).closest<HTMLElement>("[data-index]");
       if (!card) return;
@@ -38,7 +46,18 @@ const PicturesGrid = ({ items, transition, duration, staggerDelayMs }: ItemsProp
       const childrenElements = stopCurrentTransitions(cache, grid);
       const newPositions = getNewPositions(cache, gridBoundingRect, childrenElements);
       if (newPositions) {
-        startAnimation(cache, gridBoundingRect, newPositions, transition, duration, staggerDelayMs);
+        isAnimatingRef.current = true;
+        startAnimation(
+          cache,
+          gridBoundingRect,
+          newPositions,
+          transition,
+          duration,
+          staggerDelayMs,
+          () => {
+            isAnimatingRef.current = false;
+          }
+        );
       }
     },
     [transition, duration, staggerDelayMs]
@@ -57,13 +76,17 @@ const PicturesGrid = ({ items, transition, duration, staggerDelayMs }: ItemsProp
 
     const newPositions = getNewPositions(cache, gridBoundingRect, childrenElements);
     if (newPositions) {
-      startAnimation(cache, gridBoundingRect, newPositions, transition, duration, staggerDelayMs);
+      isAnimatingRef.current = true;
+      startAnimation(cache, gridBoundingRect, newPositions, transition, duration, staggerDelayMs, () => {
+        isAnimatingRef.current = false;
+      });
     }
 
     grid.addEventListener("click", handleClick);
 
     return () => {
       stopCurrentTransitions(cache, grid);
+      isAnimatingRef.current = false;
       grid.removeEventListener("click", handleClick);
     };
   }, [items, transition, duration, staggerDelayMs, handleClick]);
