@@ -1,20 +1,19 @@
 "use client";
 
-import ModalLayout from "@/components/modal-layout";
-import { type Key, ListBox, Select } from "@heroui/react";
-import { useState } from "react";
-import type { Image } from "./picture/picture-grid/picture-grid.type";
 import { CircleXmark } from "@gravity-ui/icons";
+import { type Key, ListBox, Select } from "@heroui/react";
+import { useCallback, useState } from "react";
 
-const states = [
-  {
-    id: "gallery",
-    name: "Galeria de imagenes"
-  }
+import ModalLayout from "@/components/modal-layout";
+import type { PortfolioImage } from "./picture";
+import { VIEW_KEYS } from "./view-keys";
+
+const SELECT_OPTIONS = [
+  { id: VIEW_KEYS.GALLERY, label: "Image Gallery" }
 ] as const;
 
 type SelectboxProps = {
-  portfolios: Image[];
+  portfolios: PortfolioImage[];
 };
 
 const Selectbox = ({ portfolios }: SelectboxProps): React.JSX.Element => {
@@ -29,6 +28,11 @@ const Selectbox = ({ portfolios }: SelectboxProps): React.JSX.Element => {
     }
   };
 
+  const handleSelectionChange = useCallback((key: Key | null): void => {
+    setSelectedKey(key);
+    setIsOpen(Boolean(key));
+  }, []);
+
   return (
     <>
       <div className="flex items-center gap-2">
@@ -37,10 +41,7 @@ const Selectbox = ({ portfolios }: SelectboxProps): React.JSX.Element => {
           className="w-64"
           placeholder="Select an example"
           selectedKey={selectedKey}
-          onSelectionChange={(key) => {
-            setSelectedKey(key);
-            setIsOpen(Boolean(key));
-          }}
+          onSelectionChange={handleSelectionChange}
         >
           <Select.Trigger>
             <Select.Value />
@@ -49,9 +50,9 @@ const Selectbox = ({ portfolios }: SelectboxProps): React.JSX.Element => {
 
           <Select.Popover>
             <ListBox>
-              {states.map((state) => (
-                <ListBox.Item key={state.id} id={state.id} textValue={state.name}>
-                  {state.name}
+              {SELECT_OPTIONS.map((option) => (
+                <ListBox.Item key={option.id} id={option.id} textValue={option.label}>
+                  {option.label}
                   <ListBox.ItemIndicator />
                 </ListBox.Item>
               ))}
@@ -59,15 +60,15 @@ const Selectbox = ({ portfolios }: SelectboxProps): React.JSX.Element => {
           </Select.Popover>
         </Select>
         <CircleXmark
+          aria-label="Clear selection"
           className="size-5 cursor-pointer text-border-secondary"
-          onClick={() => {
-            setSelectedKey(null);
-            setIsOpen(false);
-          }}
+          role="button"
+          tabIndex={0}
+          onClick={() => handleOpenChange(false)}
         />
       </div>
       <ModalLayout
-        component={selectedKey}
+        activeView={selectedKey}
         isOpen={isOpen}
         portfolios={portfolios}
         handleOpenChange={handleOpenChange}

@@ -1,11 +1,17 @@
 "use client";
 import { useCallback, useEffect, useRef, useState } from "react";
+import Image from "next/image";
+
 import { ItemCachePosition, ItemsProps, PositionCoordinates } from "./picture-grid.type";
 import { getNewPositions, registerPositions } from "./animation/picture-grid.position";
 import { startAnimation, stopCurrentTransitions } from "./animation/picture-grid.animation";
-import Image from "next/image";
 
-const PicturesGrid = ({ items, transition, duration, timeOut }: ItemsProps): React.JSX.Element => {
+const ZOOMED_SIZES = "(max-width: 640px) 100vw, (max-width: 768px) 75vw, 50vw";
+const DEFAULT_SIZES = "(max-width: 640px) 50vw, (max-width: 768px) 33vw, 16vw";
+/** Number of images loaded eagerly as they are likely above the fold */
+const EAGER_LOAD_COUNT = 6;
+
+const PicturesGrid = ({ items, transition, duration, staggerDelayMs }: ItemsProps): React.JSX.Element => {
   const gridRef = useRef<HTMLDivElement>(null);
   const cacheRef = useRef<ItemCachePosition>({});
   const [zoomedIndex, setZoomedIndex] = useState<number | null>(null);
@@ -15,27 +21,27 @@ const PicturesGrid = ({ items, transition, duration, timeOut }: ItemsProps): Rea
       const grid = gridRef.current;
       if (!grid) return;
 
-      const target = ev.target as HTMLElement;
+      const card = (ev.target as HTMLElement).closest<HTMLElement>("[data-index]");
+      if (!card) return;
 
-      if (target.tagName === "IMG") {
-        const elParent = target.parentElement?.parentElement;
-        if (!elParent) return;
+      const rawIndex = card.dataset.index;
+      if (rawIndex === undefined) return;
+      const index = parseInt(rawIndex, 10);
+      if (isNaN(index)) return;
 
-        const index = Number(elParent.dataset.index);
-        const isZooming = !elParent.classList.contains("zoom");
-        elParent.classList.toggle("zoom");
-        setZoomedIndex(isZooming ? index : null);
+      const isZooming = !card.classList.contains("zoom");
+      card.classList.toggle("zoom");
+      setZoomedIndex(isZooming ? index : null);
 
-        const cache = cacheRef.current;
-        const gridsItemPosition: PositionCoordinates = grid.getBoundingClientRect();
-        const childrenElements = stopCurrentTransitions(cache, grid);
-        const newPositions = getNewPositions(cache, gridsItemPosition, childrenElements);
-        if (newPositions) {
-          startAnimation(cache, gridsItemPosition, newPositions, transition, duration, timeOut);
-        }
+      const cache = cacheRef.current;
+      const gridBoundingRect: PositionCoordinates = grid.getBoundingClientRect();
+      const childrenElements = stopCurrentTransitions(cache, grid);
+      const newPositions = getNewPositions(cache, gridBoundingRect, childrenElements);
+      if (newPositions) {
+        startAnimation(cache, gridBoundingRect, newPositions, transition, duration, staggerDelayMs);
       }
     },
-    [transition, duration, timeOut]
+    [transition, duration, staggerDelayMs]
   );
 
   useEffect((): (() => void) => {
@@ -43,15 +49,15 @@ const PicturesGrid = ({ items, transition, duration, timeOut }: ItemsProps): Rea
     if (!grid) return () => {};
 
     const cache = cacheRef.current;
-    const gridsItemPosition: PositionCoordinates = grid.getBoundingClientRect();
+    const gridBoundingRect: PositionCoordinates = grid.getBoundingClientRect();
 
-    registerPositions(cache, gridsItemPosition, grid.children as HTMLCollectionOf<HTMLElement>);
+    registerPositions(cache, gridBoundingRect, grid.children as HTMLCollectionOf<HTMLElement>);
 
     const childrenElements = stopCurrentTransitions(cache, grid);
 
-    const newPositions = getNewPositions(cache, gridsItemPosition, childrenElements);
+    const newPositions = getNewPositions(cache, gridBoundingRect, childrenElements);
     if (newPositions) {
-      startAnimation(cache, gridsItemPosition, newPositions, transition, duration, timeOut);
+      startAnimation(cache, gridBoundingRect, newPositions, transition, duration, staggerDelayMs);
     }
 
     grid.addEventListener("click", handleClick);
@@ -60,17 +66,14 @@ const PicturesGrid = ({ items, transition, duration, timeOut }: ItemsProps): Rea
       stopCurrentTransitions(cache, grid);
       grid.removeEventListener("click", handleClick);
     };
-  }, [items, transition, duration, timeOut, handleClick]);
+  }, [items, transition, duration, staggerDelayMs, handleClick]);
 
-  const getSizes = useCallback(
-    (index: number): string => {
-      if (zoomedIndex === index) {
-        return "(max-width: 640px) 100vw, (max-width: 768px) 75vw, 50vw";
-      }
-      return "(max-width: 640px) 50vw, (max-width: 768px) 33vw, 16vw";
-    },
-    [zoomedIndex]
-  );
+  const getSizes = (index: number): string => {
+    if (zoomedIndex === index) {
+      return ZOOMED_SIZES;
+    }
+    return DEFAULT_SIZES;
+  };
 
   return (
     <div ref={gridRef} className="picture-grid">
@@ -81,7 +84,7 @@ const PicturesGrid = ({ items, transition, duration, timeOut }: ItemsProps): Rea
               fill
               alt={item.name ?? ""}
               blurDataURL={item.blurDataURL}
-              loading={index < 6 ? "eager" : "lazy"}
+              loading={index < EAGER_LOAD_COUNT ? "eager" : "lazy"}
               placeholder="blur"
               quality={75}
               sizes={getSizes(index)}

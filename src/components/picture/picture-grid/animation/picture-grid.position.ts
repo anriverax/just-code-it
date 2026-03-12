@@ -5,7 +5,9 @@ import {
   Positions
 } from "../picture-grid.type";
 
-import { DATASET_KEY, toArray } from "../picture-grid.utils";
+import { GRID_ITEM_KEY, toArray } from "../picture-grid.utils";
+
+let idCounter = 0;
 
 const getCurrentPositionChildElement = (
   gridBoundingClientRect: PositionCoordinates,
@@ -30,11 +32,9 @@ export const registerPositions = (
 ): void => {
   const childrenElements = toArray(elements);
   childrenElements.forEach((el) => {
-    if (typeof el.getBoundingClientRect !== "function") return;
+    if (!el.dataset[GRID_ITEM_KEY]) el.dataset[GRID_ITEM_KEY] = `grid-item-${idCounter++}`;
 
-    if (!el.dataset[DATASET_KEY]) el.dataset[DATASET_KEY] = `${Math.random()}`;
-
-    const animatedGridId = el.dataset[DATASET_KEY] as string;
+    const animatedGridId = el.dataset[GRID_ITEM_KEY] as string;
 
     if (!cache[animatedGridId]) cache[animatedGridId] = {} as Positions;
 
@@ -56,11 +56,11 @@ export const getNewPositions = (
     currentPositionChildElement: getCurrentPositionChildElement(gridBoundingClientRect, el)
   }));
 
-  positionGridChildren.forEach(({ el, currentPositionChildElement }) => {
-    const position = cache[el.dataset[DATASET_KEY] as string];
+  positionGridChildren.forEach(({ el }) => {
+    const position = cache[el.dataset[GRID_ITEM_KEY] as string];
 
     if (!position) {
-      registerPositions(cache, currentPositionChildElement, [el]);
+      registerPositions(cache, gridBoundingClientRect, [el]);
     }
   });
 

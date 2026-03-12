@@ -1,30 +1,16 @@
-import type { Easing } from "popmotion";
+import type { TransitionKey } from "./picture-grid.utils";
 
-export interface Image {
+export interface PortfolioImage {
   img: string;
   name?: string;
   blurDataURL?: string;
 }
 
-export interface Transition {
-  linear: Easing;
-  easeIn: Easing;
-  easeOut: Easing;
-  easeInOut: Easing;
-  circIn: Easing;
-  circOut: Easing;
-  circInOut: Easing;
-  backIn: Easing;
-  backOut: Easing;
-  backInOut: Easing;
-  anticipate: Easing;
-}
-
 export interface ItemsProps {
-  items: Image[];
-  transition: keyof Transition;
+  items: PortfolioImage[];
+  transition: TransitionKey;
   duration: number;
-  timeOut: number;
+  staggerDelayMs: number;
 }
 
 export interface PositionCoordinates {
@@ -51,10 +37,7 @@ export interface Coords {
   scaleY: number;
 }
 
-export interface ChildCoordinates {
-  top?: number;
-  left?: number;
-}
+export type ChildCoordinates = Partial<Pick<PositionCoordinates, "top" | "left">>;
 
 export interface PositionGridChild {
   childCoords: ChildCoordinates;

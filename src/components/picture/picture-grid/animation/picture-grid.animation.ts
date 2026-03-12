@@ -4,11 +4,10 @@ import {
   Coords,
   ItemCachePosition,
   PositionCoordinates,
-  PositionGridChild,
-  Transition
+  PositionGridChild
 } from "../picture-grid.type";
 
-import { DATASET_KEY, popmotionEasing } from "../picture-grid.utils";
+import { GRID_ITEM_KEY, TransitionKey, popmotionEasing } from "../picture-grid.utils";
 import { registerPositions } from "./picture-grid.position";
 
 const applyTransform = (el: HTMLElement, { translateX, translateY, scaleX, scaleY }: Coords): void => {
@@ -20,6 +19,8 @@ const applyTransform = (el: HTMLElement, { translateX, translateY, scaleX, scale
 
   const firstChild = el.children[0] as HTMLElement;
   if (firstChild) {
+    // Counter-scale the inner child to neutralise the parent's scale,
+    // preserving the visual size of content during the FLIP animation.
     firstChild.style.transform = isFinished ? "" : `scaleX(${1 / scaleX}) scaleY(${1 / scaleY})`;
   }
 };
@@ -28,14 +29,18 @@ export const startAnimation = (
   cache: ItemCachePosition,
   gridBoundingClientRect: PositionCoordinates,
   positionGridChildren: PositionGridChild[],
-  transition: keyof Transition,
+  transition: TransitionKey,
   duration: number,
-  timeOut: number
+  staggerDelayMs: number
 ): void => {
+  if (!popmotionEasing[transition]) {
+    throw new Error(`"${transition}" is not a valid easing name`);
+  }
+
   positionGridChildren.forEach(
     ({ el, currentPositionChildElement: { top, left, width, height } }, i) => {
       const firstChild = el.children[0] as HTMLElement;
-      const position = cache[el.dataset[DATASET_KEY] as string];
+      const position = cache[el.dataset[GRID_ITEM_KEY] as string];
       const coords: Coords = {
         scaleX: position.childElement.width / width,
         scaleY: position.childElement.height / height,
@@ -50,10 +55,6 @@ export const startAnimation = (
       }
 
       applyTransform(el, coords);
-
-      if (!popmotionEasing[transition]) {
-        throw new Error(`${transition} is not a valid easing name`);
-      }
 
       let animationInstance: { stop: () => void } | null = null;
       let timeoutId: ReturnType<typeof setTimeout> | null = null;
@@ -76,7 +77,7 @@ export const startAnimation = (
 
       timeoutId = setTimeout((): void => {
         requestAnimationFrame(init);
-      }, timeOut * i);
+      }, staggerDelayMs * i);
 
       position.stop = (): void => {
         if (timeoutId) {
@@ -99,19 +100,17 @@ export const stopCurrentTransitions = (
   const childrenElements = Array.from(container.children) as HTMLElement[];
 
   childrenElements.forEach((el) => {
-    const position = cache[el.dataset[DATASET_KEY] as string];
+    const position = cache[el.dataset[GRID_ITEM_KEY] as string];
     if (position?.stop) {
       position.stop();
       delete position.stop;
     }
   });
 
-  requestAnimationFrame(() => {
-    childrenElements.forEach((el) => {
-      el.style.transform = "";
-      const firstChild = el.children[0] as HTMLElement;
-      if (firstChild) firstChild.style.transform = "";
-    });
+  childrenElements.forEach((el) => {
+    el.style.transform = "";
+    const firstChild = el.children[0] as HTMLElement;
+    if (firstChild) firstChild.style.transform = "";
   });
 
   return childrenElements;

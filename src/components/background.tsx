@@ -1,4 +1,4 @@
-"use client";
+const BRAND_BLUE = "#7FC8FF";
 
 const Background = (): React.JSX.Element => (
   <div className="pointer-events-none absolute inset-0">
@@ -6,7 +6,7 @@ const Background = (): React.JSX.Element => (
       className="pointer-events-none absolute inset-0 hidden items-center justify-center lg:flex xl:hidden"
       style={{ width: "1284px", height: "945px" }}
     >
-      <div className="relative h-px w-full max-w-321" style={{ backgroundColor: "rgb(127, 200, 255)" }}>
+      <div className="relative h-px w-full max-w-321" style={{ backgroundColor: BRAND_BLUE }}>
         <div className="absolute inset-x-0 top-full h-10 w-full bg-linear-to-b from-[#7FC8FF10] to-transparent"></div>
         <div className="absolute inset-x-0 bottom-full h-10 w-full bg-linear-to-t from-[#7FC8FF10] to-transparent"></div>
       </div>
@@ -83,7 +83,7 @@ const Background = (): React.JSX.Element => (
           style={{ maskType: "alpha" }}
         >
           <path
-            d="M 353.8999999999999 472.5C 96.3 472.5 0 236.25 0 236.25V 0H 1284V 472.5H 353.8999999999999Z"
+            d="M 353.9 472.5C 96.3 472.5 0 236.25 0 236.25V 0H 1284V 472.5H 353.9Z"
             fill="#D9D9D9"
           ></path>
         </mask>
@@ -97,7 +97,7 @@ const Background = (): React.JSX.Element => (
           style={{ maskType: "alpha" }}
         >
           <path
-            d="M 353.8999999999999 472.5C 96.3 472.5 0 708.75 0 708.75V 945H 1284V 472.5H 353.8999999999999Z"
+            d="M 353.9 472.5C 96.3 472.5 0 708.75 0 708.75V 945H 1284V 472.5H 353.9Z"
             fill="#D9D9D9"
           ></path>
         </mask>
@@ -309,7 +309,7 @@ const Background = (): React.JSX.Element => (
         <circle r="6" fill="#7AC0F4"></circle>
       </g>
       <path
-        d="M 0 236.25C 0 236.25 96.3 472.5 353.8999999999999 472.5L 1284 472.5"
+        d="M 0 236.25C 0 236.25 96.3 472.5 353.9 472.5L 1284 472.5"
         stroke="#7FC8FF"
         pathLength="1"
         strokeDasharray="1"
@@ -330,7 +330,7 @@ const Background = (): React.JSX.Element => (
       <g mask="url(#rrdmt1)">
         <g filter="url(#rrdf1)">
           <path
-            d="M 0 236.25C 0 236.25 96.3 472.5 353.8999999999999 472.5L 1284 472.5"
+            d="M 0 236.25C 0 236.25 96.3 472.5 353.9 472.5L 1284 472.5"
             stroke="url(#rrdg1)"
             strokeWidth="15"
             pathLength="1"
@@ -357,7 +357,7 @@ const Background = (): React.JSX.Element => (
             begin="0s"
             dur="15s"
             repeatCount="indefinite"
-            path="M 0 236.25C 0 236.25 96.3 472.5 353.8999999999999 472.5L 1284 472.5"
+            path="M 0 236.25C 0 236.25 96.3 472.5 353.9 472.5L 1284 472.5"
             calcMode="spline"
             keyPoints="0;1"
             keyTimes="0;1"
@@ -381,7 +381,7 @@ const Background = (): React.JSX.Element => (
           begin="0s"
           dur="15s"
           repeatCount="indefinite"
-          path="M 0 236.25C 0 236.25 96.3 472.5 353.8999999999999 472.5L 1284 472.5"
+          path="M 0 236.25C 0 236.25 96.3 472.5 353.9 472.5L 1284 472.5"
           calcMode="spline"
           keyPoints="0;1"
           keyTimes="0;1"
@@ -391,7 +391,7 @@ const Background = (): React.JSX.Element => (
         <circle r="6" fill="#7AC0F4"></circle>
       </g>
       <path
-        d="M 0 708.75C 0 708.75 96.3 472.5 353.8999999999999 472.5L 1284 472.5"
+        d="M 0 708.75C 0 708.75 96.3 472.5 353.9 472.5L 1284 472.5"
         stroke="#7FC8FF"
         pathLength="1"
         strokeDasharray="1"
@@ -412,7 +412,7 @@ const Background = (): React.JSX.Element => (
       <g mask="url(#rrdmb1)">
         <g filter="url(#rrdf1)">
           <path
-            d="M 0 708.75C 0 708.75 96.3 472.5 353.8999999999999 472.5L 1284 472.5"
+            d="M 0 708.75C 0 708.75 96.3 472.5 353.9 472.5L 1284 472.5"
             stroke="url(#rrdg1)"
             strokeWidth="15"
             pathLength="1"
@@ -439,7 +439,7 @@ const Background = (): React.JSX.Element => (
             begin="8.2s"
             dur="15s"
             repeatCount="indefinite"
-            path="M 0 708.75C 0 708.75 96.3 472.5 353.8999999999999 472.5L 1284 472.5"
+            path="M 0 708.75C 0 708.75 96.3 472.5 353.9 472.5L 1284 472.5"
             calcMode="spline"
             keyPoints="0;1"
             keyTimes="0;1"
@@ -463,7 +463,7 @@ const Background = (): React.JSX.Element => (
           begin="8.2s"
           dur="15s"
           repeatCount="indefinite"
-          path="M 0 708.75C 0 708.75 96.3 472.5 353.8999999999999 472.5L 1284 472.5"
+          path="M 0 708.75C 0 708.75 96.3 472.5 353.9 472.5L 1284 472.5"
           calcMode="spline"
           keyPoints="0;1"
           keyTimes="0;1"
