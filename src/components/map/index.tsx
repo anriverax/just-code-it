@@ -5,65 +5,88 @@ import { useCallback, useState } from "react";
 import Map, { Marker, NavigationControl, Popup, ViewStateChangeEvent } from "react-map-gl/mapbox";
 import "mapbox-gl/dist/mapbox-gl.css";
 
-import { SCHOOL_DATA } from "./school-data";
-import type { SchoolCenter } from "./types";
+import type { MapSearchResult, MapboxGeocodingResponse } from "./types";
 import { Button } from "@heroui/react";
 
-type SchoolPopupProps = {
-  school: SchoolCenter;
+const DEFAULT_CENTER = { longitude: -88.9, latitude: 13.7 };
+
+type PlacePopupProps = {
+  place: MapSearchResult;
 };
 
-const SchoolPopup = ({ school }: SchoolPopupProps): React.JSX.Element => (
+const PlacePopup = ({ place }: PlacePopupProps): React.JSX.Element => (
   <div className="min-w-48 space-y-1 p-1 text-xs">
-    <p className="font-semibold text-text-primary">{school.name}</p>
+    <p className="font-semibold text-text-primary">{place.name}</p>
     <p className="text-text-secondary">
-      <span className="font-medium">Código:</span> {school.code}
+      <span className="font-medium">Dirección:</span> {place.placeName}
     </p>
     <p className="text-text-secondary">
-      <span className="font-medium">Departamento:</span> {school.department}
-    </p>
-    <p className="text-text-secondary">
-      <span className="font-medium">Municipio:</span> {school.municipality}
-    </p>
-    <p className="text-text-secondary">
-      <span className="font-medium">Dirección:</span> {school.address}
-    </p>
-    <p className="text-text-secondary">
-      <span className="font-medium">Coordenadas:</span> {school.latitude.toFixed(4)}°N,{" "}
-      {Math.abs(school.longitude).toFixed(4)}°W
+      <span className="font-medium">Coordenadas:</span> {place.latitude.toFixed(4)}°N,{" "}
+      {Math.abs(place.longitude).toFixed(4)}°W
     </p>
   </div>
 );
 
+async function geocodeSearch(query: string, token: string): Promise<MapSearchResult[]> {
+  const params = new URLSearchParams({
+    access_token: token,
+    proximity: `${DEFAULT_CENTER.longitude},${DEFAULT_CENTER.latitude}`,
+    limit: "5"
+  });
+
+  const url = `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(query)}.json?${params.toString()}`;
+  const res = await fetch(url);
+
+  if (!res.ok) return [];
+
+  const data: MapboxGeocodingResponse = await res.json();
+
+  return data.features.map((f) => ({
+    id: f.id,
+    name: f.text,
+    placeName: f.place_name,
+    longitude: f.center[0],
+    latitude: f.center[1]
+  }));
+}
+
 const MapBox = (): React.JSX.Element => {
   const [viewState, setViewState] = useState({
-    longitude: -88.9,
-    latitude: 13.7,
+    ...DEFAULT_CENTER,
     zoom: 7.5
   });
   const [query, setQuery] = useState("");
-  const [searchResults, setSearchResults] = useState<SchoolCenter[]>([]);
-  const [hoveredSchool, setHoveredSchool] = useState<SchoolCenter | null>(null);
+  const [searchResults, setSearchResults] = useState<MapSearchResult[]>([]);
+  const [hoveredPlace, setHoveredPlace] = useState<MapSearchResult | null>(null);
+  const [isSearching, setIsSearching] = useState(false);
 
   const handleSearch = useCallback(
-    (e: React.FormEvent<HTMLFormElement>): void => {
+    async (e: React.FormEvent<HTMLFormElement>): Promise<void> => {
       e.preventDefault();
-      const q = query.trim().toLowerCase();
+      const q = query.trim();
       if (!q) {
         setSearchResults([]);
         return;
       }
-      const results = SCHOOL_DATA.filter(
-        (school) => school.name.toLowerCase().includes(q) || school.code.toLowerCase().includes(q)
-      );
-      setSearchResults(results);
-      if (results.length > 0) {
-        setViewState((prev) => ({
-          ...prev,
-          longitude: results[0].longitude,
-          latitude: results[0].latitude,
-          zoom: 13
-        }));
+
+      const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
+      if (!token) return;
+
+      setIsSearching(true);
+      try {
+        const results = await geocodeSearch(q, token);
+        setSearchResults(results);
+
+        if (results.length > 0) {
+          setViewState((prev) => ({
+            ...prev,
+            longitude: results[0].longitude,
+            latitude: results[0].latitude,
+            zoom: 14
+          }));
+        }
+      } finally {
+        setIsSearching(false);
       }
     },
     [query]
@@ -75,14 +98,14 @@ const MapBox = (): React.JSX.Element => {
         <input
           aria-label="Buscar centro escolar"
           className="w-full rounded-md border border-border-primary bg-bg-primary px-3 py-2 text-sm text-text-primary placeholder:text-text-tertiary focus:outline-none focus:ring-2 focus:ring-accent-primary"
-          placeholder="Buscar centro escolar por nombre o código…"
+          placeholder="Escriba el nombre del centro escolar…"
           type="text"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
         />
-        <Button aria-label="Buscar" isDisabled={!query.trim()} type="submit">
+        <Button aria-label="Buscar" isDisabled={!query.trim() || isSearching} type="submit">
           <MagnifierPlus className="size-4" />
-          Buscar
+          {isSearching ? "Buscando…" : "Buscar"}
         </Button>
       </form>
 
@@ -93,24 +116,23 @@ const MapBox = (): React.JSX.Element => {
         </p>
       )}
 
-      <div className="h-96 w-full rounded-md overflow-hidden">
+      <div className="h-96 w-full overflow-hidden rounded-md">
         <Map
           {...viewState}
-          interactiveLayerIds={["clusters", "unclustered", "depto-fill"]}
           mapboxAccessToken={process.env.NEXT_PUBLIC_MAPBOX_TOKEN}
           mapStyle="mapbox://styles/mapbox/light-v11"
           onMove={(evt: ViewStateChangeEvent) => setViewState(evt.viewState)}
         >
           <NavigationControl position="top-right" />
 
-          {searchResults.map((school) => (
-            <Marker key={school.id} latitude={school.latitude} longitude={school.longitude}>
+          {searchResults.map((place) => (
+            <Marker key={place.id} latitude={place.latitude} longitude={place.longitude}>
               <div
-                aria-label={school.name}
+                aria-label={place.name}
                 className="relative cursor-pointer"
                 role="img"
-                onMouseEnter={() => setHoveredSchool(school)}
-                onMouseLeave={() => setHoveredSchool(null)}
+                onMouseEnter={() => setHoveredPlace(place)}
+                onMouseLeave={() => setHoveredPlace(null)}
               >
                 <span className="absolute inline-flex size-4 animate-ping rounded-full bg-red-400 opacity-75" />
                 <span className="relative inline-flex size-4 rounded-full border-2 border-white bg-red-500 shadow-md" />
@@ -118,15 +140,15 @@ const MapBox = (): React.JSX.Element => {
             </Marker>
           ))}
 
-          {hoveredSchool && (
+          {hoveredPlace && (
             <Popup
               anchor="bottom"
               closeButton={false}
-              latitude={hoveredSchool.latitude}
-              longitude={hoveredSchool.longitude}
+              latitude={hoveredPlace.latitude}
+              longitude={hoveredPlace.longitude}
               offset={16}
             >
-              <SchoolPopup school={hoveredSchool} />
+              <PlacePopup place={hoveredPlace} />
             </Popup>
           )}
         </Map>
