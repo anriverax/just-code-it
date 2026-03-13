@@ -7,9 +7,11 @@ export default async function Home(): Promise<React.JSX.Element> {
   const portfolios = await getPortfolioImages();
 
   return (
-    <div>
+    <div className="mx-auto max-w-4xl px-4">
       <div className="mt-8 flex justify-center">
         <Selectbox portfolios={portfolios} />
+      </div>
+      <div className="mt-6">
         <MapBox />
       </div>
     </div>
