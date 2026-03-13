@@ -37,7 +37,7 @@ async function geocodeSearch(query: string, token: string): Promise<MapSearchRes
   const url = `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(query)}.json?${params.toString()}`;
   const res = await fetch(url);
 
-  if (!res.ok) return [];
+  if (!res.ok) throw new Error(`Geocoding request failed: ${res.status}`);
 
   const data: MapboxGeocodingResponse = await res.json();
 
@@ -59,10 +59,12 @@ const MapBox = (): React.JSX.Element => {
   const [searchResults, setSearchResults] = useState<MapSearchResult[]>([]);
   const [hoveredPlace, setHoveredPlace] = useState<MapSearchResult | null>(null);
   const [isSearching, setIsSearching] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const handleSearch = useCallback(
     async (e: React.FormEvent<HTMLFormElement>): Promise<void> => {
       e.preventDefault();
+      setError(null);
       const q = query.trim();
       if (!q) {
         setSearchResults([]);
@@ -70,7 +72,10 @@ const MapBox = (): React.JSX.Element => {
       }
 
       const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
-      if (!token) return;
+      if (!token) {
+        setError("No se ha configurado el token de Mapbox.");
+        return;
+      }
 
       setIsSearching(true);
       try {
@@ -85,6 +90,9 @@ const MapBox = (): React.JSX.Element => {
             zoom: 14
           }));
         }
+      } catch {
+        setError("Error al buscar. Intente de nuevo.");
+        setSearchResults([]);
       } finally {
         setIsSearching(false);
       }
@@ -108,6 +116,8 @@ const MapBox = (): React.JSX.Element => {
           {isSearching ? "Buscando…" : "Buscar"}
         </Button>
       </form>
+
+      {error && <p className="text-xs text-red-500">{error}</p>}
 
       {searchResults.length > 0 && (
         <p className="text-xs text-text-secondary">
