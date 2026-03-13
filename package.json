@@ -20,10 +20,12 @@
     "@heroui/styles": "^3.0.0-beta.8",
     "clsx": "^2.1.1",
     "framer-motion": "^12.35.2",
+    "mapbox-gl": "^3.20.0",
     "next": "16.1.6",
     "popmotion": "^11.0.5",
     "react": "19.2.3",
     "react-dom": "19.2.3",
+    "react-map-gl": "^8.1.0",
     "tailwind-merge": "^3.5.0"
   },
   "devDependencies": {

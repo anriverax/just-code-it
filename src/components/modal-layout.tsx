@@ -2,10 +2,8 @@
 
 import { CircleCheck } from "@gravity-ui/icons";
 import { Button, Modal } from "@heroui/react";
-import React, { type Key } from "react";
+import React, { PropsWithChildren, type Key } from "react";
 
-import { Gallery } from "./gallery";
-import type { PortfolioImage } from "./picture";
 import { VIEW_KEYS, type ViewKey } from "./view-keys";
 
 const VIEW_TITLES: Record<ViewKey, string> = {
@@ -16,15 +14,14 @@ type ModalLayoutProps = {
   isOpen: boolean;
   handleOpenChange: (nextOpen: boolean) => void;
   activeView: Key | null;
-  portfolios: PortfolioImage[];
 };
 
 const ModalLayout = ({
   isOpen,
   handleOpenChange,
   activeView,
-  portfolios
-}: ModalLayoutProps): React.JSX.Element => {
+  children
+}: PropsWithChildren<ModalLayoutProps>): React.JSX.Element => {
   return (
     <Modal.Backdrop isDismissable={false} isOpen={isOpen} onOpenChange={handleOpenChange}>
       <Modal.Container size="cover">
@@ -36,9 +33,7 @@ const ModalLayout = ({
             </Modal.Icon>
             <Modal.Heading>{VIEW_TITLES[activeView as ViewKey] ?? "Example"}</Modal.Heading>
           </Modal.Header>
-          <Modal.Body>
-            {activeView === VIEW_KEYS.GALLERY && <Gallery portfolios={portfolios} />}
-          </Modal.Body>
+          <Modal.Body>{children}</Modal.Body>
           <Modal.Footer>
             <Button slot="close" variant="secondary">
               Cancel

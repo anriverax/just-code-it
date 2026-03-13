@@ -38,7 +38,7 @@ const ThemeToggle = (): React.JSX.Element => {
   };
 
   return (
-    <div className="fixed right-4 top-4 z-[1000] rounded-full border border-border/80 bg-surface/90 p-1 shadow-sm backdrop-blur">
+    <div className="fixed right-4 top-4 z-1000 rounded-full border border-border/80 bg-surface/90 p-1 shadow-sm backdrop-blur">
       <div className="grid grid-cols-2 gap-1">
         <button
           aria-label="Switch to light theme"

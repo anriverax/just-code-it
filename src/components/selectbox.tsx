@@ -7,6 +7,7 @@ import { useCallback, useState } from "react";
 import ModalLayout from "@/components/modal-layout";
 import type { PortfolioImage } from "./picture";
 import { VIEW_KEYS } from "./view-keys";
+import { Gallery } from "./gallery";
 
 const SELECT_OPTIONS = [{ id: VIEW_KEYS.GALLERY, label: "Image Gallery" }] as const;
 
@@ -65,12 +66,9 @@ const Selectbox = ({ portfolios }: SelectboxProps): React.JSX.Element => {
           onClick={() => handleOpenChange(false)}
         />
       </div>
-      <ModalLayout
-        activeView={selectedKey}
-        isOpen={isOpen}
-        portfolios={portfolios}
-        handleOpenChange={handleOpenChange}
-      />
+      <ModalLayout activeView={selectedKey} isOpen={isOpen} handleOpenChange={handleOpenChange}>
+        {selectedKey === VIEW_KEYS.GALLERY && <Gallery portfolios={portfolios} />}
+      </ModalLayout>
     </>
   );
 };
