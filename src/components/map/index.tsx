@@ -53,7 +53,7 @@ async function geocodeSearch(query: string, token: string): Promise<MapSearchRes
 const MapBox = (): React.JSX.Element => {
   const [viewState, setViewState] = useState({
     ...DEFAULT_CENTER,
-    zoom: 7.5
+    zoom: 7.8
   });
   const [query, setQuery] = useState("");
   const [searchResults, setSearchResults] = useState<MapSearchResult[]>([]);
