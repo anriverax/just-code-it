@@ -7,6 +7,7 @@ import "mapbox-gl/dist/mapbox-gl.css";
 
 import { SCHOOL_DATA } from "./school-data";
 import type { SchoolCenter } from "./types";
+import { Button } from "@heroui/react";
 
 type SchoolPopupProps = {
   school: SchoolCenter;
@@ -79,15 +80,10 @@ const MapBox = (): React.JSX.Element => {
           value={query}
           onChange={(e) => setQuery(e.target.value)}
         />
-        <button
-          aria-label="Buscar"
-          className="flex items-center gap-1 rounded-md bg-accent-primary px-4 py-2 text-sm font-medium text-white hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-accent-primary disabled:opacity-50"
-          disabled={!query.trim()}
-          type="submit"
-        >
+        <Button aria-label="Buscar" isDisabled={!query.trim()} type="submit">
           <MagnifierPlus className="size-4" />
           Buscar
-        </button>
+        </Button>
       </form>
 
       {searchResults.length > 0 && (
