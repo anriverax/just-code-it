@@ -1,7 +1,7 @@
 "use client";
 
 import { MagnifierPlus } from "@gravity-ui/icons";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useState } from "react";
 import Map, { Marker, NavigationControl, Popup, ViewStateChangeEvent } from "react-map-gl/mapbox";
 import "mapbox-gl/dist/mapbox-gl.css";
 
@@ -50,11 +50,14 @@ function getDepartmentFromQuery(query: string): (typeof EL_SALVADOR_DEPARTMENTS)
 
 type PlacePopupProps = {
   place: MapSearchResult;
+  label: string;
 };
 
-const PlacePopup = ({ place }: PlacePopupProps): React.JSX.Element => (
+const PlacePopup = ({ place, label }: PlacePopupProps): React.JSX.Element => (
   <div className="min-w-48 space-y-1 p-1 text-xs">
-    <p className="font-semibold text-text-primary">{place.name}</p>
+    <p className="font-semibold text-text-primary">
+      <span className="text-text-secondary">{label}:</span> {place.name}
+    </p>
     <p className="text-text-secondary">
       <span className="font-medium">Dirección:</span> {place.placeName}
     </p>
@@ -104,41 +107,38 @@ async function geocodeSearch(query: string, token: string): Promise<MapSearchRes
     .filter((result) => !department || normalizeText(result.placeName).includes(department.value));
 }
 
-async function logSchoolsWithCoordinates(token: string): Promise<void> {
-  const schoolsWithCoordinates = [];
+type SearchFieldState = {
+  query: string;
+  results: MapSearchResult[];
+  selectedPlace: MapSearchResult | null;
+  isSearching: boolean;
+};
 
-  for (const school of schools) {
-    try {
-      const results = await geocodeSearch(`${school.currentName}, ${school.department}`, token);
-      const firstResult = results[0];
+const initialSearchFieldState: SearchFieldState = {
+  query: "",
+  results: [],
+  selectedPlace: null,
+  isSearching: false
+};
 
-      schoolsWithCoordinates.push({
-        id: school.id,
-        code: school.code,
-        currentName: school.currentName,
-        excel: school.excel,
-        department: school.department,
-        municipality: school.municipality,
-        district: school.district,
-        latitude: firstResult?.latitude,
-        longitude: firstResult?.longitude
-      });
-    } catch {
-      schoolsWithCoordinates.push({
-        id: school.id,
-        code: school.code,
-        currentName: school.currentName,
-        excel: school.excel,
-        department: school.department,
-        municipality: school.municipality,
-        district: school.district,
-        latitude: null,
-        longitude: null
-      });
-    }
+function fitBounds(
+  origin: MapSearchResult | null,
+  destination: MapSearchResult | null
+): { longitude: number; latitude: number; zoom: number } | null {
+  if (origin && destination) {
+    return {
+      longitude: (origin.longitude + destination.longitude) / 2,
+      latitude: (origin.latitude + destination.latitude) / 2,
+      zoom: 10
+    };
   }
 
-  console.log(JSON.stringify(schoolsWithCoordinates, null, 2));
+  const place = origin ?? destination;
+  if (place) {
+    return { longitude: place.longitude, latitude: place.latitude, zoom: 14 };
+  }
+
+  return null;
 }
 
 const MapBox = (): React.JSX.Element => {
@@ -146,30 +146,29 @@ const MapBox = (): React.JSX.Element => {
     ...DEFAULT_CENTER,
     zoom: 7.8
   });
-  const [query, setQuery] = useState("");
-  const [searchResults, setSearchResults] = useState<MapSearchResult[]>([]);
-  const [selectedPlace, setSelectedPlace] = useState<MapSearchResult | null>(null);
-  const [isSearching, setIsSearching] = useState(false);
+  const [origin, setOrigin] = useState<SearchFieldState>(initialSearchFieldState);
+  const [destination, setDestination] = useState<SearchFieldState>(initialSearchFieldState);
+  const [popupPlace, setPopupPlace] = useState<{
+    place: MapSearchResult;
+    label: string;
+  } | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const hasLoggedSchoolsRef = useRef(false);
-  const detectedDepartment = getDepartmentFromQuery(query);
 
-  useEffect(() => {
-    const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
-    if (!token || hasLoggedSchoolsRef.current) return;
-
-    hasLoggedSchoolsRef.current = true;
-    void logSchoolsWithCoordinates(token);
-  }, []);
+  const detectedDepartment = getDepartmentFromQuery(
+    origin.query || destination.query
+  );
 
   const handleSearch = useCallback(
-    async (e: React.FormEvent<HTMLFormElement>): Promise<void> => {
-      e.preventDefault();
+    async (
+      field: "origin" | "destination",
+      query: string,
+      setState: React.Dispatch<React.SetStateAction<SearchFieldState>>,
+      otherPlace: MapSearchResult | null
+    ): Promise<void> => {
       setError(null);
       const q = query.trim();
       if (!q) {
-        setSearchResults([]);
-        setSelectedPlace(null);
+        setState((prev) => ({ ...prev, results: [], selectedPlace: null }));
         return;
       }
 
@@ -179,54 +178,178 @@ const MapBox = (): React.JSX.Element => {
         return;
       }
 
-      setIsSearching(true);
+      setState((prev) => ({ ...prev, isSearching: true }));
       try {
         const results = await geocodeSearch(q, token);
-        setSearchResults(results);
-        setSelectedPlace(null);
+        setState((prev) => ({ ...prev, results, selectedPlace: null, isSearching: false }));
 
         if (results.length > 0) {
-          setViewState((prev) => ({
-            ...prev,
-            longitude: results[0].longitude,
-            latitude: results[0].latitude,
-            zoom: 14
-          }));
+          const firstResult = results[0];
+          const newPlace = field === "origin" ? firstResult : otherPlace;
+          const newOther = field === "origin" ? otherPlace : firstResult;
+          const bounds = fitBounds(newPlace ?? null, newOther ?? null);
+          if (bounds) {
+            setViewState((prev) => ({ ...prev, ...bounds }));
+          }
         }
       } catch {
         setError("Error al buscar. Intente de nuevo.");
-        setSearchResults([]);
-      } finally {
-        setIsSearching(false);
+        setState((prev) => ({ ...prev, results: [], isSearching: false }));
       }
     },
-    [query]
+    []
+  );
+
+  const handleSelectResult = useCallback(
+    (
+      place: MapSearchResult,
+      field: "origin" | "destination",
+      setState: React.Dispatch<React.SetStateAction<SearchFieldState>>,
+      otherPlace: MapSearchResult | null
+    ) => {
+      setState((prev) => ({
+        ...prev,
+        query: place.name,
+        selectedPlace: place,
+        results: []
+      }));
+
+      const originPlace = field === "origin" ? place : otherPlace;
+      const destPlace = field === "destination" ? place : otherPlace;
+      const bounds = fitBounds(originPlace ?? null, destPlace ?? null);
+      if (bounds) {
+        setViewState((prev) => ({ ...prev, ...bounds }));
+      }
+    },
+    []
+  );
+
+  const handleOriginSubmit = useCallback(
+    (e: React.FormEvent<HTMLFormElement>): void => {
+      e.preventDefault();
+      void handleSearch("origin", origin.query, setOrigin, destination.selectedPlace);
+    },
+    [handleSearch, origin.query, destination.selectedPlace]
+  );
+
+  const handleDestinationSubmit = useCallback(
+    (e: React.FormEvent<HTMLFormElement>): void => {
+      e.preventDefault();
+      void handleSearch("destination", destination.query, setDestination, origin.selectedPlace);
+    },
+    [handleSearch, destination.query, origin.selectedPlace]
   );
 
   return (
     <div className="w-full space-y-3">
-      <form className="flex items-center gap-2" onSubmit={handleSearch}>
-        <input
-          aria-label="Buscar centro escolar"
-          className="w-full rounded-md border border-border-primary bg-bg-primary px-3 py-2 text-sm text-text-primary placeholder:text-text-tertiary focus:outline-none focus:ring-2 focus:ring-accent-primary"
-          placeholder="Escriba el nombre del centro escolar…"
-          type="text"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-        />
-        <Button aria-label="Buscar" isDisabled={!query.trim() || isSearching} type="submit">
-          <MagnifierPlus className="size-4" />
-          {isSearching ? "Buscando…" : "Buscar"}
-        </Button>
-      </form>
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        {/* Origin search */}
+        <form className="flex items-center gap-2" onSubmit={handleOriginSubmit}>
+          <div className="relative w-full">
+            <input
+              aria-label="Buscar lugar de origen"
+              className="w-full rounded-md border border-border-primary bg-bg-primary px-3 py-2 text-sm text-text-primary placeholder:text-text-tertiary focus:outline-none focus:ring-2 focus:ring-accent-primary"
+              placeholder="Buscar lugar de origen…"
+              type="text"
+              value={origin.query}
+              onChange={(e) =>
+                setOrigin((prev) => ({ ...prev, query: e.target.value }))
+              }
+            />
+            {origin.results.length > 0 && (
+              <ul className="absolute z-50 mt-1 max-h-48 w-full overflow-auto rounded-md border border-border-primary bg-bg-primary shadow-lg">
+                {origin.results.map((place) => (
+                  <li key={place.id}>
+                    <button
+                      className="w-full px-3 py-2 text-left text-sm text-text-primary hover:bg-bg-secondary"
+                      type="button"
+                      onClick={() =>
+                        handleSelectResult(place, "origin", setOrigin, destination.selectedPlace)
+                      }
+                    >
+                      <p className="font-medium">{place.name}</p>
+                      <p className="truncate text-xs text-text-secondary">{place.placeName}</p>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+          <Button
+            aria-label="Buscar origen"
+            isDisabled={!origin.query.trim() || origin.isSearching}
+            type="submit"
+          >
+            <MagnifierPlus className="size-4" />
+            {origin.isSearching ? "Buscando…" : "Origen"}
+          </Button>
+        </form>
+
+        {/* Destination search */}
+        <form className="flex items-center gap-2" onSubmit={handleDestinationSubmit}>
+          <div className="relative w-full">
+            <input
+              aria-label="Buscar lugar de destino"
+              className="w-full rounded-md border border-border-primary bg-bg-primary px-3 py-2 text-sm text-text-primary placeholder:text-text-tertiary focus:outline-none focus:ring-2 focus:ring-accent-primary"
+              placeholder="Buscar lugar de destino…"
+              type="text"
+              value={destination.query}
+              onChange={(e) =>
+                setDestination((prev) => ({ ...prev, query: e.target.value }))
+              }
+            />
+            {destination.results.length > 0 && (
+              <ul className="absolute z-50 mt-1 max-h-48 w-full overflow-auto rounded-md border border-border-primary bg-bg-primary shadow-lg">
+                {destination.results.map((place) => (
+                  <li key={place.id}>
+                    <button
+                      className="w-full px-3 py-2 text-left text-sm text-text-primary hover:bg-bg-secondary"
+                      type="button"
+                      onClick={() =>
+                        handleSelectResult(
+                          place,
+                          "destination",
+                          setDestination,
+                          origin.selectedPlace
+                        )
+                      }
+                    >
+                      <p className="font-medium">{place.name}</p>
+                      <p className="truncate text-xs text-text-secondary">{place.placeName}</p>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+          <Button
+            aria-label="Buscar destino"
+            isDisabled={!destination.query.trim() || destination.isSearching}
+            type="submit"
+          >
+            <MagnifierPlus className="size-4" />
+            {destination.isSearching ? "Buscando…" : "Destino"}
+          </Button>
+        </form>
+      </div>
 
       {error && <p className="text-xs text-red-500">{error}</p>}
 
-      {searchResults.length > 0 && (
-        <p className="text-xs text-text-secondary">
-          {searchResults.length} resultado{searchResults.length !== 1 ? "s" : ""} encontrado
-          {searchResults.length !== 1 ? "s" : ""}
-        </p>
+      {(origin.selectedPlace || destination.selectedPlace) && (
+        <div className="flex flex-wrap gap-3 text-xs text-text-secondary">
+          {origin.selectedPlace && (
+            <p>
+              <span className="mr-1 inline-block size-2 rounded-full bg-blue-500" />
+              <span className="font-medium">Origen:</span> {origin.selectedPlace.name}
+            </p>
+          )}
+          {destination.selectedPlace && (
+            <p>
+              <span className="mr-1 inline-block size-2 rounded-full bg-red-500" />
+              <span className="font-medium">Destino:</span> {destination.selectedPlace.name}
+            </p>
+          )}
+        </div>
       )}
 
       <div className="h-96 w-full overflow-hidden rounded-md">
@@ -243,34 +366,65 @@ const MapBox = (): React.JSX.Element => {
         >
           <NavigationControl position="top-right" />
 
-          {searchResults.map((place) => (
-            <Marker key={place.id} latitude={place.latitude} longitude={place.longitude}>
+          {origin.selectedPlace && (
+            <Marker
+              latitude={origin.selectedPlace.latitude}
+              longitude={origin.selectedPlace.longitude}
+            >
               <button
-                aria-label={place.name}
+                aria-label={`Origen: ${origin.selectedPlace.name}`}
                 className="relative block cursor-pointer"
                 type="button"
                 onClick={(event) => {
                   event.stopPropagation();
-                  setSelectedPlace((current) => (current?.id === place.id ? null : place));
+                  setPopupPlace((current) =>
+                    current?.place.id === origin.selectedPlace?.id
+                      ? null
+                      : { place: origin.selectedPlace!, label: "Origen" }
+                  );
+                }}
+              >
+                <span className="absolute inline-flex size-4 animate-ping rounded-full bg-blue-400 opacity-75" />
+                <span className="relative inline-flex size-4 rounded-full border-2 border-white bg-blue-500 shadow-md" />
+              </button>
+            </Marker>
+          )}
+
+          {destination.selectedPlace && (
+            <Marker
+              latitude={destination.selectedPlace.latitude}
+              longitude={destination.selectedPlace.longitude}
+            >
+              <button
+                aria-label={`Destino: ${destination.selectedPlace.name}`}
+                className="relative block cursor-pointer"
+                type="button"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  setPopupPlace((current) =>
+                    current?.place.id === destination.selectedPlace?.id
+                      ? null
+                      : { place: destination.selectedPlace!, label: "Destino" }
+                  );
                 }}
               >
                 <span className="absolute inline-flex size-4 animate-ping rounded-full bg-red-400 opacity-75" />
                 <span className="relative inline-flex size-4 rounded-full border-2 border-white bg-red-500 shadow-md" />
               </button>
             </Marker>
-          ))}
+          )}
 
-          {selectedPlace && (
+          {popupPlace && (
             <Popup
               anchor="bottom"
               closeOnClick={false}
               closeButton={true}
-              latitude={selectedPlace.latitude}
-              longitude={selectedPlace.longitude}
+              latitude={popupPlace.place.latitude}
+              longitude={popupPlace.place.longitude}
               offset={16}
-              onClose={() => setSelectedPlace(null)}
+              onClose={() => setPopupPlace(null)}
             >
-              <PlacePopup place={selectedPlace} />
+              <PlacePopup label={popupPlace.label} place={popupPlace.place} />
             </Popup>
           )}
           <MapBoxDepartment selectedDepartment={detectedDepartment?.label ?? null} />
