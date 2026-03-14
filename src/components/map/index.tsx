@@ -1,11 +1,11 @@
 "use client";
 
 import { MagnifierPlus } from "@gravity-ui/icons";
-import { useCallback, useState } from "react";
-import Map, { Marker, NavigationControl, Popup, ViewStateChangeEvent } from "react-map-gl/mapbox";
+import { useCallback, useEffect, useState } from "react";
+import Map, { Layer, Marker, NavigationControl, Popup, Source, ViewStateChangeEvent } from "react-map-gl/mapbox";
 import "mapbox-gl/dist/mapbox-gl.css";
 
-import type { MapSearchResult, MapboxGeocodingResponse } from "./types";
+import type { DirectionsResponse, MapSearchResult, MapboxGeocodingResponse, RouteInfo } from "./types";
 import { Button } from "@heroui/react";
 import MapBoxDepartment from "./mapbox-department";
 
@@ -107,6 +107,47 @@ async function geocodeSearch(query: string, token: string): Promise<MapSearchRes
     .filter((result) => !department || normalizeText(result.placeName).includes(department.value));
 }
 
+async function fetchRoute(
+  origin: MapSearchResult,
+  destination: MapSearchResult,
+  token: string
+): Promise<RouteInfo | null> {
+  const coords = `${origin.longitude},${origin.latitude};${destination.longitude},${destination.latitude}`;
+  const params = new URLSearchParams({
+    access_token: token,
+    geometries: "geojson",
+    overview: "full"
+  });
+
+  const url = `https://api.mapbox.com/directions/v5/mapbox/driving/${coords}?${params.toString()}`;
+  const res = await fetch(url);
+
+  if (!res.ok) return null;
+
+  const data: DirectionsResponse = await res.json();
+
+  if (data.code !== "Ok" || data.routes.length === 0) return null;
+
+  const route = data.routes[0];
+  return {
+    distance: route.distance,
+    duration: route.duration,
+    geometry: route.geometry
+  };
+}
+
+function formatDistance(meters: number): string {
+  return meters >= 1000 ? `${(meters / 1000).toFixed(1)} km` : `${Math.round(meters)} m`;
+}
+
+function formatDuration(seconds: number): string {
+  const minutes = Math.round(seconds / 60);
+  if (minutes < 60) return `${minutes} min`;
+  const hours = Math.floor(minutes / 60);
+  const remainingMinutes = minutes % 60;
+  return remainingMinutes > 0 ? `${hours} h ${remainingMinutes} min` : `${hours} h`;
+}
+
 type SearchFieldState = {
   query: string;
   results: MapSearchResult[];
@@ -153,10 +194,29 @@ const MapBox = (): React.JSX.Element => {
     label: string;
   } | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [routeInfo, setRouteInfo] = useState<RouteInfo | null>(null);
 
   const detectedDepartment = getDepartmentFromQuery(
     origin.query || destination.query
   );
+
+  useEffect(() => {
+    const originPlace = origin.selectedPlace;
+    const destPlace = destination.selectedPlace;
+    const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
+
+    if (!originPlace || !destPlace || !token) return;
+
+    let cancelled = false;
+
+    void fetchRoute(originPlace, destPlace, token).then((info: RouteInfo | null): void => {
+      if (!cancelled) setRouteInfo(info);
+    });
+
+    return (): void => {
+      cancelled = true;
+    };
+  }, [origin.selectedPlace, destination.selectedPlace]);
 
   const handleSearch = useCallback(
     async (
@@ -169,6 +229,7 @@ const MapBox = (): React.JSX.Element => {
       const q = query.trim();
       if (!q) {
         setState((prev) => ({ ...prev, results: [], selectedPlace: null }));
+        setRouteInfo(null);
         return;
       }
 
@@ -182,6 +243,7 @@ const MapBox = (): React.JSX.Element => {
       try {
         const results = await geocodeSearch(q, token);
         setState((prev) => ({ ...prev, results, selectedPlace: null, isSearching: false }));
+        setRouteInfo(null);
 
         if (results.length > 0) {
           const firstResult = results[0];
@@ -349,6 +411,11 @@ const MapBox = (): React.JSX.Element => {
               <span className="font-medium">Destino:</span> {destination.selectedPlace.name}
             </p>
           )}
+          {routeInfo && (
+            <p>
+              📍 {formatDistance(routeInfo.distance)} · ⏱ {formatDuration(routeInfo.duration)}
+            </p>
+          )}
         </div>
       )}
 
@@ -427,6 +494,40 @@ const MapBox = (): React.JSX.Element => {
               <PlacePopup label={popupPlace.label} place={popupPlace.place} />
             </Popup>
           )}
+
+          {routeInfo && (
+            <Source
+              id="route"
+              type="geojson"
+              data={{
+                type: "Feature",
+                properties: {},
+                geometry: routeInfo.geometry
+              }}
+            >
+              <Layer
+                id="route-outline"
+                type="line"
+                layout={{ "line-join": "round", "line-cap": "round" }}
+                paint={{
+                  "line-color": "#1d4ed8",
+                  "line-width": 8,
+                  "line-opacity": 0.3
+                }}
+              />
+              <Layer
+                id="route-line"
+                type="line"
+                layout={{ "line-join": "round", "line-cap": "round" }}
+                paint={{
+                  "line-color": "#3b82f6",
+                  "line-width": 4,
+                  "line-opacity": 0.9
+                }}
+              />
+            </Source>
+          )}
+
           <MapBoxDepartment selectedDepartment={detectedDepartment?.label ?? null} />
         </Map>
       </div>
