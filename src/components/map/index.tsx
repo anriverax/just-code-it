@@ -209,9 +209,13 @@ const MapBox = (): React.JSX.Element => {
 
     let cancelled = false;
 
-    void fetchRoute(originPlace, destPlace, token).then((info: RouteInfo | null): void => {
-      if (!cancelled) setRouteInfo(info);
-    });
+    void fetchRoute(originPlace, destPlace, token)
+      .then((info: RouteInfo | null): void => {
+        if (!cancelled) setRouteInfo(info);
+      })
+      .catch((): void => {
+        if (!cancelled) setRouteInfo(null);
+      });
 
     return (): void => {
       cancelled = true;

@@ -28,13 +28,7 @@ export type RouteInfo = {
   geometry: RouteGeometry;
 };
 
-export type DirectionsRoute = {
-  distance: number;
-  duration: number;
-  geometry: RouteGeometry;
-};
-
 export type DirectionsResponse = {
-  routes: DirectionsRoute[];
+  routes: RouteInfo[];
   code: string;
 };
