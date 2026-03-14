@@ -2,14 +2,19 @@
 
 import { MagnifierPlus } from "@gravity-ui/icons";
 import { useCallback, useEffect, useState } from "react";
-import Map, { Layer, Marker, NavigationControl, Popup, Source, ViewStateChangeEvent } from "react-map-gl/mapbox";
+import Map, {
+  Layer,
+  Marker,
+  NavigationControl,
+  Popup,
+  Source,
+  ViewStateChangeEvent
+} from "react-map-gl/mapbox";
 import "mapbox-gl/dist/mapbox-gl.css";
 
 import type { DirectionsResponse, MapSearchResult, MapboxGeocodingResponse, RouteInfo } from "./types";
 import { Button } from "@heroui/react";
-import MapBoxDepartment from "./mapbox-department";
 
-const DEFAULT_CENTER = { longitude: -88.9, latitude: 13.7 };
 const DEFAULT_SEARCH_BOUNDS = {
   minLongitude: -90.2,
   minLatitude: 13.1,
@@ -46,11 +51,11 @@ async function geocodeSearch(query: string, token: string): Promise<MapSearchRes
       DEFAULT_SEARCH_BOUNDS.maxLongitude,
       DEFAULT_SEARCH_BOUNDS.maxLatitude
     ].join(","),
-    proximity: `${DEFAULT_CENTER.longitude},${DEFAULT_CENTER.latitude}`,
+    proximity: `${(DEFAULT_SEARCH_BOUNDS.minLongitude + DEFAULT_SEARCH_BOUNDS.maxLongitude) / 2},${(DEFAULT_SEARCH_BOUNDS.minLatitude + DEFAULT_SEARCH_BOUNDS.maxLatitude) / 2}`,
     limit: "5"
   });
 
-  const url = `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(query)}.json?${params.toString()}`;
+  const url = `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(query)}.json?${params.toString()}&country=sv`;
   const res = await fetch(url);
 
   if (!res.ok) throw new Error(`Geocoding request failed: ${res.status}`);
@@ -151,7 +156,8 @@ function fitBounds(
 
 const MapBox = (): React.JSX.Element => {
   const [viewState, setViewState] = useState({
-    ...DEFAULT_CENTER,
+    longitude: DEFAULT_SEARCH_BOUNDS.minLongitude,
+    latitude: DEFAULT_SEARCH_BOUNDS.maxLatitude,
     zoom: 7.8
   });
   const [origin, setOrigin] = useState<SearchFieldState>(initialSearchFieldState);
@@ -281,9 +287,7 @@ const MapBox = (): React.JSX.Element => {
               placeholder="Buscar lugar de origen…"
               type="text"
               value={origin.query}
-              onChange={(e) =>
-                setOrigin((prev) => ({ ...prev, query: e.target.value }))
-              }
+              onChange={(e) => setOrigin((prev) => ({ ...prev, query: e.target.value }))}
             />
             {origin.results.length > 0 && (
               <ul className="absolute z-50 mt-1 max-h-48 w-full overflow-auto rounded-md border border-border-primary bg-bg-primary shadow-lg">
@@ -323,9 +327,7 @@ const MapBox = (): React.JSX.Element => {
               placeholder="Buscar lugar de destino…"
               type="text"
               value={destination.query}
-              onChange={(e) =>
-                setDestination((prev) => ({ ...prev, query: e.target.value }))
-              }
+              onChange={(e) => setDestination((prev) => ({ ...prev, query: e.target.value }))}
             />
             {destination.results.length > 0 && (
               <ul className="absolute z-50 mt-1 max-h-48 w-full overflow-auto rounded-md border border-border-primary bg-bg-primary shadow-lg">
@@ -335,12 +337,7 @@ const MapBox = (): React.JSX.Element => {
                       className="w-full px-3 py-2 text-left text-sm text-text-primary hover:bg-bg-secondary"
                       type="button"
                       onClick={() =>
-                        handleSelectResult(
-                          place,
-                          "destination",
-                          setDestination,
-                          origin.selectedPlace
-                        )
+                        handleSelectResult(place, "destination", setDestination, origin.selectedPlace)
                       }
                     >
                       <p className="font-medium">{place.name}</p>
@@ -401,10 +398,7 @@ const MapBox = (): React.JSX.Element => {
           <NavigationControl position="top-right" />
 
           {origin.selectedPlace && (
-            <Marker
-              latitude={origin.selectedPlace.latitude}
-              longitude={origin.selectedPlace.longitude}
-            >
+            <Marker latitude={origin.selectedPlace.latitude} longitude={origin.selectedPlace.longitude}>
               <button
                 aria-label={`Origen: ${origin.selectedPlace.name}`}
                 className="relative block cursor-pointer"
@@ -503,9 +497,7 @@ const MapBox = (): React.JSX.Element => {
                 <span>🚗</span>
                 <span>{formatDuration(routeInfo.duration)}</span>
               </p>
-              <p className="text-center text-xs text-gray-500">
-                {formatDistance(routeInfo.distance)}
-              </p>
+              <p className="text-center text-xs text-gray-500">{formatDistance(routeInfo.distance)}</p>
             </div>
           </div>
         )}
