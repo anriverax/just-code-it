@@ -386,7 +386,7 @@ const MapBox = (): React.JSX.Element => {
         </div>
       )}
 
-      <div className="h-96 w-full overflow-hidden rounded-md">
+      <div className="relative h-96 w-full overflow-hidden rounded-md">
         <Map
           {...viewState}
           initialViewState={{
@@ -495,6 +495,20 @@ const MapBox = (): React.JSX.Element => {
             </Source>
           )}
         </Map>
+
+        {routeInfo && (
+          <div className="pointer-events-none absolute left-1/2 top-4 z-10 -translate-x-1/2">
+            <div className="pointer-events-auto rounded-lg border border-gray-200 bg-white px-4 py-2 shadow-md">
+              <p className="flex items-center gap-2 text-sm font-semibold text-gray-800">
+                <span>🚗</span>
+                <span>{formatDuration(routeInfo.duration)}</span>
+              </p>
+              <p className="text-center text-xs text-gray-500">
+                {formatDistance(routeInfo.distance)}
+              </p>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
