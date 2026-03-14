@@ -16,37 +16,6 @@ const DEFAULT_SEARCH_BOUNDS = {
   maxLongitude: -87.6,
   maxLatitude: 14.6
 };
-const EL_SALVADOR_DEPARTMENTS = [
-  { label: "Ahuachapán", value: "ahuachapan" },
-  { label: "Santa Ana", value: "santa ana" },
-  { label: "Sonsonate", value: "sonsonate" },
-  { label: "Chalatenango", value: "chalatenango" },
-  { label: "La Libertad", value: "la libertad" },
-  { label: "San Salvador", value: "san salvador" },
-  { label: "Cuscatlán", value: "cuscatlan" },
-  { label: "Cabañas", value: "cabanas" },
-  { label: "La Paz", value: "la paz" },
-  { label: "San Vicente", value: "san vicente" },
-  { label: "Usulután", value: "usulutan" },
-  { label: "San Miguel", value: "san miguel" },
-  { label: "Morazán", value: "morazan" },
-  { label: "La Unión", value: "la union" }
-] as const;
-
-function normalizeText(text: string): string {
-  return text
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLowerCase();
-}
-
-function getDepartmentFromQuery(query: string): (typeof EL_SALVADOR_DEPARTMENTS)[number] | null {
-  const normalizedQuery = normalizeText(query);
-
-  return (
-    EL_SALVADOR_DEPARTMENTS.find((department) => normalizedQuery.includes(department.value)) ?? null
-  );
-}
 
 type PlacePopupProps = {
   place: MapSearchResult;
@@ -69,7 +38,6 @@ const PlacePopup = ({ place, label }: PlacePopupProps): React.JSX.Element => (
 );
 
 async function geocodeSearch(query: string, token: string): Promise<MapSearchResult[]> {
-  const department = getDepartmentFromQuery(query);
   const params = new URLSearchParams({
     access_token: token,
     bbox: [
@@ -103,8 +71,7 @@ async function geocodeSearch(query: string, token: string): Promise<MapSearchRes
         result.longitude <= DEFAULT_SEARCH_BOUNDS.maxLongitude &&
         result.latitude >= DEFAULT_SEARCH_BOUNDS.minLatitude &&
         result.latitude <= DEFAULT_SEARCH_BOUNDS.maxLatitude
-    )
-    .filter((result) => !department || normalizeText(result.placeName).includes(department.value));
+    );
 }
 
 async function fetchRoute(
@@ -195,10 +162,6 @@ const MapBox = (): React.JSX.Element => {
   } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [routeInfo, setRouteInfo] = useState<RouteInfo | null>(null);
-
-  const detectedDepartment = getDepartmentFromQuery(
-    origin.query || destination.query
-  );
 
   useEffect(() => {
     const originPlace = origin.selectedPlace;
@@ -531,8 +494,6 @@ const MapBox = (): React.JSX.Element => {
               />
             </Source>
           )}
-
-          <MapBoxDepartment selectedDepartment={detectedDepartment?.label ?? null} />
         </Map>
       </div>
     </div>
