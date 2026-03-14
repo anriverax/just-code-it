@@ -1,14 +1,52 @@
 "use client";
 
 import { MagnifierPlus } from "@gravity-ui/icons";
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Map, { Marker, NavigationControl, Popup, ViewStateChangeEvent } from "react-map-gl/mapbox";
 import "mapbox-gl/dist/mapbox-gl.css";
 
 import type { MapSearchResult, MapboxGeocodingResponse } from "./types";
 import { Button } from "@heroui/react";
+import MapBoxDepartment from "./mapbox-department";
 
 const DEFAULT_CENTER = { longitude: -88.9, latitude: 13.7 };
+const DEFAULT_SEARCH_BOUNDS = {
+  minLongitude: -90.2,
+  minLatitude: 13.1,
+  maxLongitude: -87.6,
+  maxLatitude: 14.6
+};
+const EL_SALVADOR_DEPARTMENTS = [
+  { label: "Ahuachapán", value: "ahuachapan" },
+  { label: "Santa Ana", value: "santa ana" },
+  { label: "Sonsonate", value: "sonsonate" },
+  { label: "Chalatenango", value: "chalatenango" },
+  { label: "La Libertad", value: "la libertad" },
+  { label: "San Salvador", value: "san salvador" },
+  { label: "Cuscatlán", value: "cuscatlan" },
+  { label: "Cabañas", value: "cabanas" },
+  { label: "La Paz", value: "la paz" },
+  { label: "San Vicente", value: "san vicente" },
+  { label: "Usulután", value: "usulutan" },
+  { label: "San Miguel", value: "san miguel" },
+  { label: "Morazán", value: "morazan" },
+  { label: "La Unión", value: "la union" }
+] as const;
+
+function normalizeText(text: string): string {
+  return text
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase();
+}
+
+function getDepartmentFromQuery(query: string): (typeof EL_SALVADOR_DEPARTMENTS)[number] | null {
+  const normalizedQuery = normalizeText(query);
+
+  return (
+    EL_SALVADOR_DEPARTMENTS.find((department) => normalizedQuery.includes(department.value)) ?? null
+  );
+}
 
 type PlacePopupProps = {
   place: MapSearchResult;
@@ -28,8 +66,15 @@ const PlacePopup = ({ place }: PlacePopupProps): React.JSX.Element => (
 );
 
 async function geocodeSearch(query: string, token: string): Promise<MapSearchResult[]> {
+  const department = getDepartmentFromQuery(query);
   const params = new URLSearchParams({
     access_token: token,
+    bbox: [
+      DEFAULT_SEARCH_BOUNDS.minLongitude,
+      DEFAULT_SEARCH_BOUNDS.minLatitude,
+      DEFAULT_SEARCH_BOUNDS.maxLongitude,
+      DEFAULT_SEARCH_BOUNDS.maxLatitude
+    ].join(","),
     proximity: `${DEFAULT_CENTER.longitude},${DEFAULT_CENTER.latitude}`,
     limit: "5"
   });
@@ -41,13 +86,59 @@ async function geocodeSearch(query: string, token: string): Promise<MapSearchRes
 
   const data: MapboxGeocodingResponse = await res.json();
 
-  return data.features.map((f) => ({
-    id: f.id,
-    name: f.text,
-    placeName: f.place_name,
-    longitude: f.center[0],
-    latitude: f.center[1]
-  }));
+  return data.features
+    .map((f) => ({
+      id: f.id,
+      name: f.text,
+      placeName: f.place_name,
+      longitude: f.center[0],
+      latitude: f.center[1]
+    }))
+    .filter(
+      (result) =>
+        result.longitude >= DEFAULT_SEARCH_BOUNDS.minLongitude &&
+        result.longitude <= DEFAULT_SEARCH_BOUNDS.maxLongitude &&
+        result.latitude >= DEFAULT_SEARCH_BOUNDS.minLatitude &&
+        result.latitude <= DEFAULT_SEARCH_BOUNDS.maxLatitude
+    )
+    .filter((result) => !department || normalizeText(result.placeName).includes(department.value));
+}
+
+async function logSchoolsWithCoordinates(token: string): Promise<void> {
+  const schoolsWithCoordinates = [];
+
+  for (const school of schools) {
+    try {
+      const results = await geocodeSearch(`${school.currentName}, ${school.department}`, token);
+      const firstResult = results[0];
+
+      schoolsWithCoordinates.push({
+        id: school.id,
+        code: school.code,
+        currentName: school.currentName,
+        excel: school.excel,
+        department: school.department,
+        municipality: school.municipality,
+        district: school.district,
+        latitude: firstResult?.latitude,
+        longitude: firstResult?.longitude
+      });
+    } catch {
+      schoolsWithCoordinates.push({
+        id: school.id,
+        code: school.code,
+        currentName: school.currentName,
+        excel: school.excel,
+        department: school.department,
+        municipality: school.municipality,
+        district: school.district,
+        latitude: null,
+        longitude: null
+      });
+    }
+  }
+
+  console.log(JSON.stringify(schoolsWithCoordinates, null, 2));
 }
 
 const MapBox = (): React.JSX.Element => {
@@ -57,9 +148,19 @@ const MapBox = (): React.JSX.Element => {
   });
   const [query, setQuery] = useState("");
   const [searchResults, setSearchResults] = useState<MapSearchResult[]>([]);
-  const [hoveredPlace, setHoveredPlace] = useState<MapSearchResult | null>(null);
+  const [selectedPlace, setSelectedPlace] = useState<MapSearchResult | null>(null);
   const [isSearching, setIsSearching] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const hasLoggedSchoolsRef = useRef(false);
+  const detectedDepartment = getDepartmentFromQuery(query);
+
+  useEffect(() => {
+    const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
+    if (!token || hasLoggedSchoolsRef.current) return;
+
+    hasLoggedSchoolsRef.current = true;
+    void logSchoolsWithCoordinates(token);
+  }, []);
 
   const handleSearch = useCallback(
     async (e: React.FormEvent<HTMLFormElement>): Promise<void> => {
@@ -68,6 +169,7 @@ const MapBox = (): React.JSX.Element => {
       const q = query.trim();
       if (!q) {
         setSearchResults([]);
+        setSelectedPlace(null);
         return;
       }
 
@@ -81,6 +183,7 @@ const MapBox = (): React.JSX.Element => {
       try {
         const results = await geocodeSearch(q, token);
         setSearchResults(results);
+        setSelectedPlace(null);
 
         if (results.length > 0) {
           setViewState((prev) => ({
@@ -129,6 +232,11 @@ const MapBox = (): React.JSX.Element => {
       <div className="h-96 w-full overflow-hidden rounded-md">
         <Map
           {...viewState}
+          initialViewState={{
+            longitude: -88.9,
+            latitude: 13.7,
+            zoom: 7.5
+          }}
           mapboxAccessToken={process.env.NEXT_PUBLIC_MAPBOX_TOKEN}
           mapStyle="mapbox://styles/mapbox/light-v11"
           onMove={(evt: ViewStateChangeEvent) => setViewState(evt.viewState)}
@@ -137,30 +245,35 @@ const MapBox = (): React.JSX.Element => {
 
           {searchResults.map((place) => (
             <Marker key={place.id} latitude={place.latitude} longitude={place.longitude}>
-              <div
+              <button
                 aria-label={place.name}
-                className="relative cursor-pointer"
-                role="img"
-                onMouseEnter={() => setHoveredPlace(place)}
-                onMouseLeave={() => setHoveredPlace(null)}
+                className="relative block cursor-pointer"
+                type="button"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  setSelectedPlace((current) => (current?.id === place.id ? null : place));
+                }}
               >
                 <span className="absolute inline-flex size-4 animate-ping rounded-full bg-red-400 opacity-75" />
                 <span className="relative inline-flex size-4 rounded-full border-2 border-white bg-red-500 shadow-md" />
-              </div>
+              </button>
             </Marker>
           ))}
 
-          {hoveredPlace && (
+          {selectedPlace && (
             <Popup
               anchor="bottom"
-              closeButton={false}
-              latitude={hoveredPlace.latitude}
-              longitude={hoveredPlace.longitude}
+              closeOnClick={false}
+              closeButton={true}
+              latitude={selectedPlace.latitude}
+              longitude={selectedPlace.longitude}
               offset={16}
+              onClose={() => setSelectedPlace(null)}
             >
-              <PlacePopup place={hoveredPlace} />
+              <PlacePopup place={selectedPlace} />
             </Popup>
           )}
+          <MapBoxDepartment selectedDepartment={detectedDepartment?.label ?? null} />
         </Map>
       </div>
     </div>
