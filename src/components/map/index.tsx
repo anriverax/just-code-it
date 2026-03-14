@@ -52,7 +52,8 @@ async function geocodeSearch(query: string, token: string): Promise<MapSearchRes
       DEFAULT_SEARCH_BOUNDS.maxLatitude
     ].join(","),
     proximity: `${(DEFAULT_SEARCH_BOUNDS.minLongitude + DEFAULT_SEARCH_BOUNDS.maxLongitude) / 2},${(DEFAULT_SEARCH_BOUNDS.minLatitude + DEFAULT_SEARCH_BOUNDS.maxLatitude) / 2}`,
-    limit: "5"
+    types: "poi,address,place,locality,neighborhood",
+    limit: "10"
   });
 
   const url = `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(query)}.json?${params.toString()}&country=sv`;
